@@ -11,7 +11,8 @@
 - [Assumptions and Limitations](#assumptions-and-limitations)
 - [Quality Assurance](#quality-assurance)
 - [Future Improvements](#future-improvements)
-- [Author](#author)
+- [About Me](#about-me)
+- [Suggestions](#suggestions)
 
 ## Overview
 
@@ -71,4 +72,14 @@ This project is for educational and portfolio purposes only. It is not tax, lega
 
 ## Future Improvements
 
-## Author 
+## About Me
+
+I am an Actuarial Science and Economics student entering my senior year and preparing for a career in actuarial analysis and risk management. I built this project to strengthen and apply my understanding of Exam FM concepts while exploring how actuarial modeling can be applied to personal finance and career planning.
+
+I am especially interested in combining financial mathematics, Excel modeling, and clear communication to build models that are both technically sound and easy to understand.
+
+[LinkedIn](https://www.linkedin.com/in/sferst/) | [GitHub](https://github.com/sferstenfeld)
+
+## Suggestions
+
+If you have any suggestions to make or find any quality assurance issues (bugs), please email me at sferstenfeld@gmail.com.
