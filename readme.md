@@ -26,13 +26,37 @@ This project is intended to demonstrate my understanding of time value of money,
 
 ## Project Highlights
 
+
+
 ## Screenshots
 
 ## Workbook Structure
 
+#### README
+
+#### INPUTS
+
+#### OUTPUT - SUMMARY
+
+#### OUTPUT - RETIREMENT
+
+#### OUTPUT - CASH FLOW
+
+#### WHAT-IF SCENARIOS
+
+#### MILESTONES
+
+#### ENGINE
+
+#### PERIODIC ENGINE
+
+#### CONSTANTS & REFERENCES
+
+#### CHARTDATA 
+
 ## How to Use
 
-1) Download the '.xlsx' file from the repository. 
+1) Download the `.xlsx` file from the repository. 
 
 2) Open the 'INPUTS' worksheet.
 
