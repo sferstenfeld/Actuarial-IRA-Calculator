@@ -32,9 +32,27 @@ This project is intended to demonstrate my understanding of time value of money,
 
 ## How to Use
 
+1) Download the '.xlsx' file from the repository. 
+
+2) Open the 'INPUTS' worksheet.
+
+3) Edit the highlighted cells
+
+4) Review the outputs and scenarios.
+
 ## Methodology
 
-The model uses a year-by-year time value of money framework. Roth IRA contributions are modeled as either annual or periodic contributions. For periodic contributions, the annual effective investment return is converted to an effective return per period:
+#### Compound Interest
+
+The model uses a year-by-year time value of money framework. Account balances grow based on the selected effective annual investment return.
+
+#### Annuities
+
+Roth IRA contributions are modeled as recurring annuity contributions. The model supports both beginning-of-period and end-of-period contribution timing.
+
+#### Periodic Effective Returns
+
+For periodic contributions, the annual effective investment return is converted to an effective return per period:
 
 ```text
 (1 + annual return)^(1 / periods per year) - 1
@@ -42,11 +60,21 @@ The model uses a year-by-year time value of money framework. Roth IRA contributi
 
 The annual modeled Roth IRA limit is indexed once per projection year and then divided across the selected contribution periods. It is not indexed separately during each month, week, or trading-day period.
 
+#### IRA-Limit Indexing
+
 The model uses an illustrative indexed IRA limit. Because the IRS does not publish the intermediate unrounded indexing value used to determine future contribution limits, the model treats the published 2026 regular limit and catch-up limit as the starting index values. Future unrounded values are projected using the user’s inflation assumption and rounded downward using the modeled statutory increments.
 
-Future federal tax thresholds and standard deductions use the same simplified indexing framework. The user’s inflation assumption is treated as CPI inflation, and the model estimates C-CPI-U inflation as approximately 90.1% of that rate based on historical data since C-CPI-U became available. For example, a 3.0% CPI assumption produces a modeled C-CPI-U rate of approximately 2.7%.
+#### Real-Dollar Conversion
+
+Nominal projected balances are converted to real dollars by dividing them by the cumulative inflation index. This estimates the future balance’s purchasing power in today’s dollars.
+
+#### Progressive Taxation
 
 Federal income tax is calculated progressively by applying each marginal rate only to the portion of taxable income within that bracket. The model also estimates Social Security, Medicare, optional flat state income tax, salary growth, and disposable take-home pay.
+
+#### C-CPI-U Proxy for Future Tax Thresholds
+
+Future federal tax thresholds and standard deductions use the same simplified indexing framework. The user’s inflation assumption is treated as CPI inflation, and the model estimates C-CPI-U inflation as approximately 90.1% of that rate based on historical data since C-CPI-U became available. For example, a 3.0% CPI assumption produces a modeled C-CPI-U rate of approximately 2.7%.
 
 ## Assumptions & Limitations
 
