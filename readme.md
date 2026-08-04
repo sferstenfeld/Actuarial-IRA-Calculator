@@ -66,7 +66,22 @@ The model uses an illustrative indexed IRA limit. Because the IRS does not publi
 
 #### Real-Dollar Conversion
 
-Nominal projected balances are converted to real dollars by dividing them by the cumulative inflation index. This estimates the future balance’s purchasing power in today’s dollars. 
+The Fisher equation describes the relationship between nominal returns, real returns, and inflation:
+
+```text
+(1 + nominal return) = (1 + real return) × (1 + inflation rate)
+
+real return = (1 + nominal return) / (1 + inflation rate) - 1
+```
+
+For future balances, the model applies the cumulative form of this relationship. A nominal balance is divided by the cumulative inflation index to estimate its purchasing power in today’s dollars:
+
+```text
+Real balance = Nominal balance / Cumulative inflation index
+
+If inflation is constant:
+Cumulative inflation index = (1 + inflation rate)^number of years
+```
 
 #### Progressive Taxation
 
@@ -76,7 +91,7 @@ Federal income tax is calculated progressively by applying each marginal rate on
 
 Future federal tax thresholds and standard deductions use the same simplified indexing framework. The user’s inflation assumption is treated as CPI inflation, and the model estimates C-CPI-U inflation as approximately 90.1% of that rate based on historical data since C-CPI-U became available. For example, a 3.0% CPI assumption produces a modeled C-CPI-U rate of approximately 2.7%.
 
-## Assumptions & Limitations
+## Assumptions and Limitations
 
 The IRA indexing results are illustrative rather than official IRS forecasts. The IRS publishes the final contribution limits, but it does not publish the intermediate unrounded index used to determine each future limit. If the actual 2026 underlying index differs from the published $7,500 regular limit or $1,100 catch-up limit used as the model’s starting index, future modeled step increases could occur earlier or later than the official limits.
 
