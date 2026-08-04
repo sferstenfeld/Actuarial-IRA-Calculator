@@ -66,7 +66,7 @@ The model uses an illustrative indexed IRA limit. Because the IRS does not publi
 
 #### Real-Dollar Conversion
 
-Nominal projected balances are converted to real dollars by dividing them by the cumulative inflation index. This estimates the future balance’s purchasing power in today’s dollars.
+Nominal projected balances are converted to real dollars by dividing them by the cumulative inflation index. This estimates the future balance’s purchasing power in today’s dollars. 
 
 #### Progressive Taxation
 
