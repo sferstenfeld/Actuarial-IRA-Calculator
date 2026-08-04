@@ -47,8 +47,7 @@ Future federal tax thresholds and standard deductions use the same simplified in
 
 Federal income tax is calculated progressively by applying each marginal rate only to the portion of taxable income within that bracket. The model also estimates Social Security, Medicare, optional flat state income tax, salary growth, and disposable take-home pay.
 
-
-## Assumptions and Limitations
+## Assumptions & Limitations
 
 The IRA indexing results are illustrative rather than official IRS forecasts. The IRS publishes the final contribution limits, but it does not publish the intermediate unrounded index used to determine each future limit. If the actual 2026 underlying index differs from the published $7,500 regular limit or $1,100 catch-up limit used as the model’s starting index, future modeled step increases could occur earlier or later than the official limits.
 
@@ -62,7 +61,7 @@ The model does not include every factor that affects a real tax return. Excluded
 
 Salary growth and actuarial career progression are user-defined assumptions. Exam raises, credential raises, merit increases, and salary caps are not forecasts of any particular employer or actuarial career path.
 
-Investment returns, inflation, salary growth, contribution growth, and tax assumptions are deterministic. The model does not simulate market volatility, sequence-of-returns risk, unemployment, career interruptions, contribution shortfalls, or changing household circumstances unless a user applies one of the available scenario tools.
+Investment returns, inflation, salary growth, contribution growth, and tax assumptions are deterministic. The model does not randomly simulate market volatility, sequence-of-returns risk, unemployment, or changing household circumstances. However, the `WHAT-IF SCENARIOS` sheet includes a user-defined contribution gap or career-break scenario that allows the user to specify a gap start year and gap length. This scenario is deterministic and does not model the probability, salary impact, or timing uncertainty of an actual career interruption.
 
 This project is for educational and portfolio purposes only. It is not tax, legal, actuarial, investment, or financial advice.
 
