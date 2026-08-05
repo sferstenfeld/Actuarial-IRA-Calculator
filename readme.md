@@ -78,9 +78,17 @@ Roth IRA contributions are modeled as recurring annuity contributions. The model
 
 For periodic contributions, the annual effective investment return is converted to an effective return per period:
 
-```text
-(1 + annual return)^(1 / periods per year) - 1
-```
+$$
+i_p = (1+i)^{1/m}-1
+$$
+
+where $i$ is the annual effective investment return and $m$ is the number of contribution periods per year.
+
+In this equation:
+
+- $i_p$: effective investment return per contribution period.
+- $i$: nominal effective annual investment return.
+- $m$: number of contribution periods per year.
 
 The annual modeled Roth IRA limit is indexed once per projection year and then divided across the selected contribution periods. It is not indexed separately during each month, week, or trading-day period.
 
@@ -92,20 +100,34 @@ The model uses an illustrative indexed IRA limit. Because the IRS does not publi
 
 The Fisher equation describes the relationship between nominal returns, real returns, and inflation:
 
-```text
-(1 + nominal return) = (1 + real return) × (1 + inflation rate)
+$$
+1+i = (1+r)(1+\pi)
+$$
 
-real return = (1 + nominal return) / (1 + inflation rate) - 1
-```
+Solving for the real return:
+
+$$
+r = \frac{1+i}{1+\pi}-1
+$$
+
+In these equations:
+
+- $r$: real effective annual investment return after adjusting for inflation.
+- $\pi$: effective annual inflation rate.
 
 For future balances, the model applies the cumulative form of this relationship. A nominal balance is divided by the cumulative inflation index to estimate its purchasing power in today’s dollars:
 
-```text
-Real balance = Nominal balance / Cumulative inflation index
+$$
+\text{Real Balance}_t = \frac{\text{Nominal Balance}_t}{\text{Cumulative Inflation Index}_t}
+$$
 
 If inflation is constant:
-Cumulative inflation index = (1 + inflation rate)^number of years
-```
+
+$$
+\text{Cumulative Inflation Index}_t = (1+\pi)^t
+$$
+
+Here, $t$ represents the number of years in the projection period.
 
 #### Progressive Taxation
 
