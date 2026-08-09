@@ -18,6 +18,8 @@ A Roth IRA retirement calculator with progressive federal tax modeling, real IRS
 - [About Me](#about-me)
 - [Suggestions](#suggestions)
 
+
+
 ## Overview
 
 This project is a Roth IRA projection model that applies Actuarial Exam Financial Mathematics (FM) concepts to a realistic personal finance and actuarial career scenario. Originally built in Excel and rebuilt as a FastAPI web app, it shows how contribution timing, investment returns, inflation, IRA contribution limits, salary growth, taxes, and career progression can affect long-term retirement outcomes.
@@ -44,7 +46,11 @@ Try the app here: [https://actuarial-ira-calculator.onrender.com/](https://actua
 
 ## Screenshots
 
+
+
 ## Features
+
+
 
 ## Tech Stack
 
@@ -52,7 +58,11 @@ The backend is a Python FastAPI service with Pydantic-validated inputs and a sin
 
 ## Setup
 
+
+
 ## Methodology
+
+
 
 #### Compound Interest
 
@@ -127,7 +137,7 @@ Future federal tax thresholds and standard deductions use the same simplified in
 
 #### Required Return Solver
 
-The What-If Scenario tab can solve for the constant annual effective return needed to reach a user-specified retirement balance, given the same contribution schedule, timing, and other base-case assumptions. This is an Exam FM-style unknown-rate problem: find \(r\) such that the projected ending balance equals a target.
+The What-If Scenario tab can solve for the constant annual effective return needed to reach a user-specified retirement balance, given the same contribution schedule, timing, and other base-case assumptions. This is an Exam FM-style unknown-rate problem: find $r$ such that the projected ending balance equals a target.
 
 If the user enters a real (inflation-adjusted) target, the solver first converts it to a nominal target using the model’s inflation path:
 
@@ -135,39 +145,51 @@ $$
 T_{\text{nominal}} = T_{\text{real}} \cdot (1+\pi)^{N_{\pi}}
 $$
 
-where \(\pi\) is the assumed annual inflation rate and \(N_{\pi}\) is the number of inflation years used elsewhere in the projection. The solve itself is always performed against this nominal target.
+where $\pi$ is the assumed annual inflation rate and $N_{\pi}$ is the number of inflation years used elsewhere in the projection. The solve itself is always performed against this nominal target.
 
-Let \(B(r)\) be the final nominal balance from the periodic accumulation engine when the annual return equals \(r\), holding every other input fixed. The solver searches for a root of the gap function
+Let $B(r)$ be the final nominal balance from the periodic accumulation engine when the annual return equals $r$, holding every other input fixed. The solver searches for a root of the gap function
 
 $$
 g(r) = B(r) - T_{\text{nominal}}
 $$
 
-Conceptually, \(B(r)\) is the future value of the starting balance plus each contribution grown at rate \(r\) for the remaining investment periods (with Beginning vs End timing already embedded in the engine). Because a higher return produces a higher ending balance, \(g(r)\) is smooth and monotonically increasing in \(r\), so a single root is well-defined when the target is reachable.
+Conceptually, $B(r)$ is the future value of the starting balance plus each contribution grown at rate $r$ for the remaining investment periods (with Beginning vs End timing already embedded in the engine). Because a higher return produces a higher ending balance, $g(r)$ is smooth and monotonically increasing in $r$, so a single root is well-defined when the target is reachable.
 
-The implementation does not rely on a spreadsheet Goal-Seek workaround. It brackets the root on \([0, 0.05]\) and doubles the upper bound until \(g\) changes sign (or reports that the target is unreachable within a 1000% annual return search limit). It then applies numerical bisection until the gap or interval width falls below a tight tolerance. If the target is already reachable at a 0% return, the solver reports 0%.
+The implementation does not rely on a spreadsheet Goal-Seek workaround. It brackets the root on $[0, 0.05]$ and doubles the upper bound until $g$ changes sign (or reports that the target is unreachable within a 1000% annual return search limit). It then applies numerical bisection until the gap or interval width falls below a tight tolerance. If the target is already reachable at a 0% return, the solver reports 0%.
 
 The solve runs as an isolated shadow calculation: it does not overwrite the main model’s assumed return or regenerate the base-case charts.
 
 ## Assumptions and Limitations
 
+#### Indexing
+
 The IRA indexing results are illustrative rather than official IRS forecasts. The IRS publishes the final contribution limits, but it does not publish the intermediate unrounded index used to determine each future limit. If the actual 2026 underlying index differs from the published $7,500 regular limit or $1,100 catch-up limit used as the model’s starting index, future modeled step increases could occur earlier or later than the official limits.
 
 The same limitation applies to the age-50 catch-up contribution model. The model assumes catch-up eligibility begins when the individual is age 50 or older and applies an illustrative indexed catch-up limit. It does not forecast future official IRS catch-up limits.
 
+The model uses a simplified C-CPI-U proxy for future tax-bracket and deduction adjustments. It does not recreate every official IRS calculation date, statutory lookback period, or rounding rule. Current-year values are based on published reference inputs, while future values are explicitly illustrative.
+
+#### Tax Policy
+
 The largest assumption is that the federal tax regime remains unchanged throughout the projection period. If Congress changes marginal tax rates, bracket structures, standard deductions, filing rules, phase-outs, or other provisions, those changes are not automatically reflected.
 
-The model uses a simplified C-CPI-U proxy for future tax-bracket and deduction adjustments. It does not recreate every official IRS calculation date, statutory lookback period, or rounding rule. Current-year values are based on published reference inputs, while future values are explicitly illustrative.
+#### Tax Scope
 
 The model does not include every factor that affects a real tax return. Excluded items include tax credits, itemized deductions, employer-sponsored retirement plans, HSA contributions, local taxes, capital gains, investment fees, Roth conversion taxation, and detailed state tax codes. State income tax is represented as an optional flat-rate estimate applied to federal taxable income.
 
+#### Career Assumptions
+
 Salary growth and actuarial career progression are user-defined assumptions. Exam raises, credential raises, merit increases, and salary caps are not forecasts of any particular employer or actuarial career path.
+
+#### Deterministic Assumptions
 
 Investment returns, inflation, salary growth, contribution growth, and tax assumptions are deterministic. The model does not randomly simulate market volatility, sequence-of-returns risk, unemployment, or changing household circumstances. However, the What-If Scenario tab includes a user-defined contribution gap or career-break scenario that allows the user to specify a gap start year and gap length. These scenarios run as isolated shadow calculations and do not change the base model. The gap scenario is deterministic and does not model the probability, salary impact, or timing uncertainty of an actual career interruption.
 
 This project is for educational and portfolio purposes only. It is not tax, legal, actuarial, investment, or financial advice.
 
 ## Quality Assurance
+
+
 
 ## Future Improvements
 
