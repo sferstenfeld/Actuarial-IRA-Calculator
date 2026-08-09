@@ -50,9 +50,9 @@ Try the app here: [https://actuarial-ira-calculator.onrender.com/](https://actua
 
 ![Calculator Overview](Screenshots/calculator-overview.png)
 
-### What-If Scenario
+### What-If Scenarios
 
-![What-If Scenario](Screenshots/what-if-scenario.png)
+![What-If Scenarios](Screenshots/what-if-scenario.png)
 
 ## Features
 
@@ -60,7 +60,7 @@ Try the app here: [https://actuarial-ira-calculator.onrender.com/](https://actua
 
 ## Tech Stack
 
-The backend is a Python FastAPI service with Pydantic-validated inputs and a single `POST /api/calculate` endpoint that returns the full projection as JSON. The frontend is vanilla HTML, CSS, and JavaScript with no build step, and Chart.js (via CDN) for the charts. The UI is a dark, fintech-style layout with two tabs: Calculator Overview for the main projection, and What-If Scenario for isolated shadow calculations.
+The backend is a Python FastAPI service with Pydantic-validated inputs and a single `POST /api/calculate` endpoint that returns the full projection as JSON. The frontend is vanilla HTML, CSS, and JavaScript with no build step, and Chart.js (via CDN) for the charts. The UI is a dark, fintech-style layout with two tabs: Calculator Overview for the main projection, and What-If Scenarios for isolated shadow calculations.
 
 ## Setup
 
@@ -143,7 +143,7 @@ Future federal tax thresholds and standard deductions use the same simplified in
 
 #### Required Return Solver
 
-The What-If Scenario tab can solve for the constant annual effective return needed to reach a user-specified retirement balance, given the same contribution schedule, timing, and other base-case assumptions. This is an Exam FM-style unknown-rate problem: find $r$ such that the projected ending balance equals a target.
+The What-If Scenarios tab can solve for the constant annual effective return needed to reach a user-specified retirement balance, given the same contribution schedule, timing, and other base-case assumptions. This is an Exam FM-style unknown-rate problem: find $r$ such that the projected ending balance equals a target.
 
 If the user enters a real (inflation-adjusted) target, the solver first converts it to a nominal target using the model’s inflation path:
 
@@ -189,7 +189,7 @@ Salary growth and actuarial career progression are user-defined assumptions. Exa
 
 #### Deterministic Assumptions
 
-Investment returns, inflation, salary growth, contribution growth, and tax assumptions are deterministic. The model does not randomly simulate market volatility, sequence-of-returns risk, unemployment, or changing household circumstances. However, the What-If Scenario tab includes a user-defined contribution gap or career-break scenario that allows the user to specify a gap start year and gap length. These scenarios run as isolated shadow calculations and do not change the base model. The gap scenario is deterministic and does not model the probability, salary impact, or timing uncertainty of an actual career interruption.
+Investment returns, inflation, salary growth, contribution growth, and tax assumptions are deterministic. The model does not randomly simulate market volatility, sequence-of-returns risk, unemployment, or changing household circumstances. However, the What-If Scenarios tab includes a user-defined contribution gap or career-break scenario that allows the user to specify a gap start year and gap length. These scenarios run as isolated shadow calculations and do not change the base model. The gap scenario is deterministic and does not model the probability, salary impact, or timing uncertainty of an actual career interruption.
 
 This project is for educational and portfolio purposes only. It is not tax, legal, actuarial, investment, or financial advice.
 

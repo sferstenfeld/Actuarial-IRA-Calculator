@@ -32,7 +32,6 @@ body {
   background: var(--page);
   min-height: 100%;
   color-scheme: dark;
-  overflow-x: hidden;
 }
 
 /* —— Top bar —— */
@@ -155,6 +154,8 @@ body {
   overflow-y: auto;
   height: calc(100vh - 3.25rem);
   min-height: 0;
+  /* Grid item default min-width:auto expands past the track to fit wide tables. */
+  min-width: 0;
   background: var(--page);
 }
 
@@ -890,6 +891,9 @@ select {
   overflow-x: auto;
   overflow-y: auto;
   max-height: 420px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   border-radius: 12px;
   background: var(--input-surface);
   -webkit-overflow-scrolling: touch;
@@ -1058,7 +1062,7 @@ select {
   }
 
   .dashboard {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     height: auto;
     min-height: calc(100vh - 3.25rem);
   }
@@ -1070,6 +1074,8 @@ select {
     border-right: none;
     border-bottom: 1px solid var(--divider);
     overflow: visible;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .sidebar-tabs {
@@ -1108,8 +1114,11 @@ select {
 
   .main-area {
     height: auto;
-    overflow: visible;
+    /* Keep x-overflow from growing the page; table scrolls inside .table-scroll. */
+    overflow-x: clip;
+    overflow-y: visible;
     padding: 1rem 0.85rem 2rem;
+    max-width: 100%;
   }
 
   .summary-grid {
@@ -1165,6 +1174,9 @@ select {
     /* Keep wide series table scrolling inside this container only. */
     overflow-x: auto;
     overflow-y: auto;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   .series-table {
@@ -1179,6 +1191,8 @@ select {
 
   .extra-detail {
     padding: 1rem 1rem;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .extra-detail > summary {
