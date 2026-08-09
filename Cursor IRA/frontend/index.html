@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>IRA Retirement Calculator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="top-bar">
+    <p class="brand">IRA Retirement Calculator</p>
+    <a
+      class="btn btn-outline github-link"
+      href="https://github.com/sferstenfeld/Actuarial-IRA-Calculator"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="GitHub repository"
+      title="GitHub"
+    >
+      <svg class="github-icon" viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" focusable="false">
+        <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+      </svg>
+    </a>
+  </header>
+
+  <div class="dashboard">
+    <aside class="sidebar" aria-label="Inputs">
+      <div class="sidebar-tabs" role="tablist" aria-label="Views">
+        <button type="button" class="tab-btn active" data-tab="main" aria-selected="true" role="tab">
+          Calculator Overview
+        </button>
+        <button type="button" class="tab-btn" data-tab="whatif" aria-selected="false" role="tab">
+          What-If Scenario
+        </button>
+      </div>
+
+      <form id="inputs" class="sidebar-form" novalidate>
+        <!-- Sidebar inputs: Tab 1 -->
+        <div id="inputs-main" class="input-panel" data-tab="main" role="tabpanel">
+          <h2 class="sidebar-heading">Assumptions</h2>
+          <fieldset>
+            <legend>Horizon &amp; account</legend>
+            <label>Starting age <input type="number" name="starting_age" value="25" min="0" max="120" /></label>
+            <label>Retirement age <input type="number" name="retirement_age" value="65" min="1" max="120" /></label>
+            <label>Current IRA balance <input type="number" name="current_ira_balance" value="0" min="0" step="100" /></label>
+            <label>
+              <span class="label-line">Annual return % <span class="info-icon" data-tooltip="Your expected annual investment return before adjusting for inflation. This is a nominal rate. Real (inflation-adjusted) results are shown separately in your outputs." aria-label="More info" role="img">ⓘ</span></span>
+              <input type="number" name="annual_return_pct" value="7.0" min="0" step="0.1" />
+            </label>
+            <label>
+              <span class="label-line">Inflation % <span class="info-icon" data-tooltip="Your expected annual inflation rate, used to convert nominal dollar figures into today's purchasing power (real values) throughout the model." aria-label="More info" role="img">ⓘ</span></span>
+              <input type="number" name="annual_inflation_pct" value="2.5" min="0" step="0.1" />
+            </label>
+            <label>
+              <span class="label-line">Contribution frequency <span class="info-icon" data-tooltip="How often contributions are added to the account. 'Advanced' lets you set a custom trading-day interval instead of a calendar frequency." aria-label="More info" role="img">ⓘ</span></span>
+              <select name="contribution_frequency">
+                <option>Annual</option>
+                <option>Semiannual</option>
+                <option>Quarterly</option>
+                <option selected>Monthly</option>
+                <option>Weekly</option>
+                <option>Advanced</option>
+              </select>
+            </label>
+            <label class="advanced-only hidden">
+              <span class="label-line">Trading-day interval <span class="info-icon" data-tooltip="Trading days between contributions. Must divide the 252-trading-day year evenly. Only valid intervals are listed. Periods/year = 252 ÷ interval." aria-label="More info" role="img">ⓘ</span></span>
+              <select name="trading_day_interval">
+                <option value="1">1 day (252× / year)</option>
+                <option value="2">2 days (126× / year)</option>
+                <option value="3">3 days (84× / year)</option>
+                <option value="4">4 days (63× / year)</option>
+                <option value="6">6 days (42× / year)</option>
+                <option value="7">7 days (36× / year)</option>
+                <option value="9">9 days (28× / year)</option>
+                <option value="12">12 days (21× / year)</option>
+                <option value="14">14 days (18× / year)</option>
+                <option value="18" selected>18 days (14× / year)</option>
+                <option value="21">21 days (12× / year)</option>
+                <option value="28">28 days (9× / year)</option>
+                <option value="36">36 days (7× / year)</option>
+                <option value="42">42 days (6× / year)</option>
+                <option value="63">63 days (4× / year)</option>
+                <option value="84">84 days (3× / year)</option>
+                <option value="126">126 days (2× / year)</option>
+                <option value="252">252 days (1× / year)</option>
+              </select>
+            </label>
+            <label>
+              <span class="label-line">Contribution timing <span class="info-icon" data-tooltip="Whether each contribution is assumed to land at the start or end of its period. Beginning timing means your money has slightly longer to grow (an extra period of compounding by retirement)." aria-label="More info" role="img">ⓘ</span></span>
+              <select name="contribution_timing">
+                <option selected>Beginning</option>
+                <option>End</option>
+              </select>
+            </label>
+            <label>
+              <span class="label-line">Contribution delay (years) <span class="info-icon" data-tooltip="Number of years before contributions begin. Use this if you plan to wait before starting to contribute. 0 means contributions start immediately." aria-label="More info" role="img">ⓘ</span></span>
+              <input type="number" name="contribution_delay_years" value="0" min="0" />
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Taxes &amp; salary</legend>
+            <label>Filing status
+              <select name="filing_status">
+                <option selected>Single</option>
+                <option>Joint</option>
+                <option>Married Filing Separately</option>
+                <option>Head of Household</option>
+              </select>
+            </label>
+            <label class="check">
+              <input type="checkbox" name="filing_status_change_enabled" />
+              <span class="label-line">Filing status change <span class="info-icon" data-tooltip="Enable this if you expect your tax filing status to change partway through the projection (e.g. getting married). You'll set the new status and how many years until it applies." aria-label="More info" role="img">ⓘ</span></span>
+            </label>
+            <label class="status-change-only hidden">Target filing status
+              <select name="target_filing_status">
+                <option>Single</option>
+                <option selected>Joint</option>
+                <option>Married Filing Separately</option>
+                <option>Head of Household</option>
+              </select>
+            </label>
+            <label class="status-change-only hidden">Years until change
+              <input type="number" name="years_until_filing_status_change" value="5" min="0" />
+            </label>
+            <label class="check">
+              <input type="checkbox" name="include_state_tax" />
+              <span class="label-line">Flat state tax <span class="info-icon" data-tooltip="A simplified flat-rate estimate, not a real state tax calculation. It doesn't model actual state tax brackets, credits, deductions, local taxes, or state-specific rules." aria-label="More info" role="img">ⓘ</span></span>
+            </label>
+            <label class="state-only hidden">State tax rate %
+              <input type="number" name="state_tax_rate_pct" value="5.0" min="0" step="0.1" />
+            </label>
+            <label>Starting salary <input type="number" name="starting_salary" value="75000" min="0" step="1000" /></label>
+            <label>Merit raise % <input type="number" name="annual_merit_raise_pct" value="3.0" min="0" step="0.1" /></label>
+            <label class="check">
+              <input type="checkbox" name="cap_salary_growth" />
+              <span class="label-line">Cap salary growth <span class="info-icon" data-tooltip="Optionally cap how high your modeled salary can rise, for scenarios like plateauing at a senior role. Salary grows normally until it hits the cap, then holds flat for the rest of the projection." aria-label="More info" role="img">ⓘ</span></span>
+            </label>
+            <label class="cap-only hidden">Maximum salary allowed
+              <input type="number" name="salary_cap" value="150000" min="0" step="1000" />
+              <span class="field-hint field-error hidden" id="salaryCapError">Must be at least your starting salary.</span>
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Actuary Mode</legend>
+            <label class="check">
+              <input type="checkbox" name="actuary_mode" />
+              <span class="label-line">Enable Actuary Mode <span class="info-icon" data-tooltip="Adds salary growth tied to passing actuarial exams and earning ASA/FSA or ACAS/FCAS credentials, on top of your regular merit raises." aria-label="More info" role="img">ⓘ</span></span>
+            </label>
+            <div class="actuary-only hidden">
+              <label>
+              <span class="label-line">Credential status <span class="info-icon" data-tooltip="If you're already credentialed, we assume your entered starting salary already reflects those career bonuses, so we won't add them again on top." aria-label="More info" role="img">ⓘ</span></span>
+                <select name="credential_status">
+                  <option selected>Not yet credentialed</option>
+                  <option>ASA-ACAS</option>
+                  <option>FSA-FCAS</option>
+                </select>
+              </label>
+              <label>
+              <span class="label-line">Exams remaining <span class="info-icon" data-tooltip="How many actuarial exams you still expect to pass. This caps the total exam-related salary bonus so it doesn't apply indefinitely." aria-label="More info" role="img">ⓘ</span></span>
+                <input type="number" name="exams_remaining" value="7" min="0" />
+              </label>
+              <label>
+              <span class="label-line">Years until exams finish <span class="info-icon" data-tooltip="How many years until you expect to finish your remaining exams. Combined with exams remaining, this sets the pace of exam-related raises." aria-label="More info" role="img">ⓘ</span></span>
+                <input type="number" name="years_until_exams_finish" value="7" min="0" />
+              </label>
+              <label>Raise per exam $ <input type="number" name="salary_raise_per_exam" value="5000" min="0" /></label>
+              <label>Associate raise $ <input type="number" name="salary_raise_associate" value="10000" min="0" /></label>
+              <label>Years until Associate <input type="number" name="years_until_associate" value="4" min="0" /></label>
+              <label>Fellowship raise $ <input type="number" name="salary_raise_fellowship" value="15000" min="0" /></label>
+              <label>
+              <span class="label-line">Years until Fellowship <span class="info-icon" data-tooltip="Years from today until you expect to reach Fellowship, not years after Associate. This applies the same way regardless of your current credential status." aria-label="More info" role="img">ⓘ</span></span>
+                <input type="number" name="years_until_fellowship" value="8" min="0" />
+              </label>
+            </div>
+          </fieldset>
+        </div>
+
+        <!-- Sidebar inputs: Tab 2 -->
+        <div id="inputs-whatif" class="input-panel hidden" data-tab="whatif" role="tabpanel" hidden>
+          <h2 class="sidebar-heading">What-If inputs</h2>
+          <fieldset>
+            <legend>Scenario parameters</legend>
+            <label>
+              <span class="label-line">Return spread ±pp <span class="info-icon" data-tooltip="How many percentage points above and below your base return rate to test for the Bear/Bull scenarios. 'pp' means percentage points, not percent. For example, a 7% base with a 3pp spread gives 4% and 10%." aria-label="More info" role="img">ⓘ</span></span>
+              <input type="number" name="return_spread_pct" value="3.0" min="0" step="0.1" />
+            </label>
+            <label>
+              <span class="label-line">Inflation swing ±pp <span class="info-icon" data-tooltip="How many percentage points above and below your base inflation rate to test. Only affects your real (inflation-adjusted) balance. Nominal balance stays the same." aria-label="More info" role="img">ⓘ</span></span>
+              <input type="number" name="inflation_swing_pct" value="1.5" min="0" step="0.1" />
+            </label>
+            <label>
+              <span class="label-line">Gap start year <span class="info-icon" data-tooltip="Models a temporary pause in contributions, e.g. a career break. Gap start year 0 means the pause begins in your very first modeled year. Contributions resume automatically after the gap ends." aria-label="More info" role="img">ⓘ</span></span>
+              <input type="number" name="contribution_gap_start_year" value="" min="0" placeholder="optional" />
+            </label>
+            <label>
+              <span class="label-line">Gap length (years) <span class="info-icon" data-tooltip="Models a temporary pause in contributions, e.g. a career break. Gap start year 0 means the pause begins in your very first modeled year. Contributions resume automatically after the gap ends." aria-label="More info" role="img">ⓘ</span></span>
+              <input type="number" name="contribution_gap_length" value="0" min="0" />
+            </label>
+            <label>
+              <span class="label-line">Early stop age <span class="info-icon" data-tooltip="Models permanently stopping contributions at this age, while your existing balance keeps growing until retirement. Different from the Gap scenario, where contributions pause and then resume." aria-label="More info" role="img">ⓘ</span></span>
+              <input type="number" name="early_stop_age" value="" min="0" placeholder="optional" />
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Required Return Solver</legend>
+            <p class="fieldset-caption">Solve for the annual return you’d need to hit a target balance by retirement — isolated from your main assumptions.</p>
+            <label>
+              <span class="label-line">Target balance $ <span class="info-icon" data-tooltip="The retirement balance you're aiming for. Used to solve for the annual return rate you'd need to reach it, given your contribution schedule." aria-label="More info" role="img">ⓘ</span></span>
+              <input type="number" name="target_retirement_balance" value="" min="0" placeholder="e.g. 2000000" />
+            </label>
+            <label class="check">
+              <input type="checkbox" name="target_balance_is_real" />
+              <span class="label-line">Target is real (inflation-adjusted) <span class="info-icon" data-tooltip="If checked, your target is treated as today's dollars and converted to a future nominal equivalent before solving. If unchecked, the target is treated as a literal future dollar amount." aria-label="More info" role="img">ⓘ</span></span>
+            </label>
+          </fieldset>
+          <p class="hint">Uses base-case assumptions from the other tab. Those are not duplicated here.</p>
+        </div>
+      </form>
+    </aside>
+
+    <main class="main-area">
+      <p id="status" class="status" role="status">Ready</p>
+
+      <!-- Main outputs: Tab 1 -->
+      <section id="output-main" class="output-panel" data-tab="main" aria-label="Results">
+        <div class="summary-block">
+          <div class="summary-grid summary-grid-primary" id="summaryPrimary"></div>
+          <div class="summary-grid summary-grid-secondary" id="summarySecondary"></div>
+          <p class="summary-caption" id="summaryCaption" hidden></p>
+          <p class="summary-callout" id="earnedIncomeCapNote" hidden></p>
+        </div>
+        <div class="toolbar">
+          <button type="button" id="exportCsv" class="btn">Export time series (CSV)</button>
+        </div>
+
+        <details class="extra-detail" open data-chart-section="primary">
+          <summary>IRA Time Value of Money Charts</summary>
+          <div class="chart-block chart-balance">
+            <div class="chart-heading">
+              <h2>Balance over time</h2>
+              <span id="vintageBadge" class="badge" hidden></span>
+            </div>
+            <div class="chart-frame chart-frame-balance">
+              <canvas id="balanceChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-block">
+            <h2>Purchasing Power Retained</h2>
+            <p class="hint">Real balance as a share of nominal — how much of today’s purchasing power remains after inflation.</p>
+            <div class="chart-frame">
+              <canvas id="purchasingPowerChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-block">
+            <h2>Growth Multiple by Contribution Vintage (by Age)</h2>
+            <p class="hint">How many times each year’s contributions grow by retirement — accounts for return, frequency, and Beginning vs End timing (annuity due vs immediate). Age axis runs from starting age through retirement age inclusive.</p>
+            <div class="chart-frame">
+              <canvas id="growthMultipleChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-block">
+            <h2>Annual contributions &amp; terminal value</h2>
+            <div class="chart-frame">
+              <canvas id="contribChart"></canvas>
+            </div>
+          </div>
+        </details>
+
+        <details class="extra-detail">
+          <summary>Milestones</summary>
+          <div class="milestones-group">
+            <h3 class="milestones-subhead">Balance milestones</h3>
+            <ul id="milestones" class="milestones"></ul>
+          </div>
+          <div id="salaryMilestonesGroup" class="milestones-group" hidden>
+            <h3 class="milestones-subhead">Salary milestones</h3>
+            <ul id="salaryMilestones" class="milestones"></ul>
+          </div>
+        </details>
+
+        <details class="extra-detail" data-chart-section="tax">
+          <summary>Tax &amp; Allocation Detail</summary>
+          <div class="chart-block">
+            <h2>Annual Take-Home Pay</h2>
+            <p class="hint">Stacked annual cash flow: taxes vs take-home. Segments sum to modeled gross salary each year.</p>
+            <div class="chart-frame chart-frame-takehome">
+              <canvas id="takeHomeChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-block">
+            <h2>Annual tax detail</h2>
+            <div class="chart-frame">
+              <canvas id="taxChart"></canvas>
+            </div>
+          </div>
+
+          <div class="allocation-block">
+            <div class="allocation-summary">
+              <h2>Cumulative Tax Summary</h2>
+              <table id="taxSummaryTable" class="summary-table"></table>
+            </div>
+            <div class="allocation-chart">
+              <h2>Lifetime Income Allocation</h2>
+              <p class="hint">Share of lifetime gross salary going to taxes, Roth contributions, and remaining take-home.</p>
+              <div class="chart-frame chart-frame-pie">
+                <canvas id="allocationChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <details class="assumptions">
+            <summary>Model assumptions &amp; caveats</summary>
+            <ul id="assumptions"></ul>
+          </details>
+        </details>
+
+        <details class="extra-detail">
+          <summary>Year-by-Year Time Series</summary>
+          <div class="table-block">
+            <div class="table-head">
+              <p class="hint">Compare this series to Excel for the same inputs. Tax columns use cents; balances are whole dollars.</p>
+            </div>
+            <div class="table-scroll">
+              <table id="seriesTable" class="series-table">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- Main outputs: Tab 2 -->
+      <section id="output-whatif" class="output-panel hidden" data-tab="whatif" aria-label="What-If results" hidden>
+        <details class="extra-detail" open>
+          <summary>Scenario Comparisons</summary>
+          <div id="scenarios" class="scenarios"></div>
+        </details>
+
+        <details class="extra-detail solver-detail" open id="requiredReturnSolver" aria-live="polite">
+          <summary>Required Return Solver</summary>
+          <p class="hint">Solve for the annual return you’d need to hit a target balance by retirement — isolated from your main assumptions.</p>
+          <div class="solver-result" id="requiredReturnResult">
+            <div class="solver-headline">
+              <div class="label">Required annual return</div>
+              <div class="value solver-placeholder" id="requiredReturnRate">—</div>
+            </div>
+            <div class="solver-meta">
+              <div class="solver-meta-row">
+                <span>Nominal target</span>
+                <span id="requiredReturnTarget">—</span>
+              </div>
+              <p class="solver-note" id="requiredReturnNote">Enter a target balance to solve.</p>
+            </div>
+          </div>
+          <p class="solver-isolation">Fully isolated — does not change your main model’s return assumption or other charts.</p>
+        </details>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+---
+description: Roth IRA/TVM project identity, architecture, and init protocol
+alwaysApply: true
+---
+
+# Roth IRA / TVM Retirement Model
+
+Rebuild of an Excel actuarial/finance model as a web app (portfolio piece, exam FM material). Reimplement logic cleanly in Python — do not port spreadsheet cell mechanics.
+
+## Stack
+
+- Backend: Python FastAPI + Pydantic; single `POST /api/calculate`
+- Frontend: vanilla HTML/CSS/JS (no bundler); Chart.js via CDN
+- Flow: form change → debounce ~300ms → full recalculate → re-render charts/tables from fresh JSON
+
+## Layout
+
+```
+backend/   app.py, models.py, engine.py, tax.py, actuary.py, scenarios.py, tests/
+frontend/  index.html, style.css, app.js
+```
+
+Handoff source of truth: `Cursor_WebApp_Handoff (1).md`
+
+## Build order (section 11)
+
+1. Backend core (engines, IRA limits, base tax)
+2. Filing status + state tax + transition
+3. Actuary Mode + salary cap
+4. Growth Multiple / Terminal Value by vintage (include seed)
+5. Milestones
+6. What-If scenarios + required-return solver
+7. Frontend + Chart.js + design system
+8. QA against handoff section 9
+
+Prioritize correct math over UI polish. Never invent Excel expected values — use fixtures Steven provides.
+
+## `init` command
+
+On literal user message `init` only: greet with status (handoff confirmed, one-line project summary, build-order checklist with progress, ask phase + Excel I/O pairs). Do not auto-start coding. Normal messages get normal responses — no checklist spam.

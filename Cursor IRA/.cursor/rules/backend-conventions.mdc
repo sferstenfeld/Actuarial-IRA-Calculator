@@ -1,0 +1,39 @@
+---
+description: Backend math, tax, and testing conventions for the Roth IRA engine
+globs: backend/**/*
+alwaysApply: false
+---
+
+# Backend conventions
+
+## Engines
+
+- Annual and periodic engines may disagree slightly — that is correct; do not force them to match.
+- Periodic rate: `(1 + annual_return)^(1/periods_per_year) - 1`
+- IRA limits: inflate base/catch-up, floor to nearest $500 / $100; catch-up starts at age 50 exactly.
+- Defaults (2026 IRS): base `$7,500`, catch-up `$1,100` — verify if year changes; do not use stale memory.
+- Growth multiple is a pure function of periods remaining. Include seed as its own vintage. Cross-check: seed FV + sum(year TVs) == ending balance (~1e-6).
+
+## Tax
+
+- Progressive federal brackets + indexed standard deduction (illustrative C-CPI-U ~90% of headline CPI — label as illustrative in UI).
+- Bracket/deduction rounding: nearest $50 for Single/Joint/HoH; nearest **$25** for MFS (§1(f)).
+- Canonical filing-status labels everywhere (UI + bracket keys) — no "Joint" vs "Married Filing Jointly" mismatches.
+- OASDI 6.2% with inflation-indexed wage base (round $100); Medicare 1.45% + 0.9% Additional above statutory thresholds (not indexed; HoH = $200k).
+- State tax: flat rate on federal taxable income, explicitly illustrative.
+- Roth MAGI: flag Direct vs Backdoor; do not reduce contribution amount.
+
+## Actuary Mode
+
+- Credential status gates bonuses (avoid double-counting). Validate fellowship ≥ associate only when Not yet credentialed.
+- Guard `years_until_exams_finish = 0` — no `inf`/`NaN`.
+- Cap via `MIN(..., cap)` so plateau is automatic.
+
+## Scenarios
+
+- Never mutate base-case inputs. Parallel shadow calcs; base row must match main result exactly.
+- Required-return: numeric root find (`brentq` / bisection), not Goal Seek hacks.
+
+## Tests
+
+Regression fixtures from Excel only. Cover section 9 edge cases (zero return/inflation, delay, timing, age-50 catch-up, all filing-status transitions, salary-cap boundary, every credential status, gap/early-stop boundaries, period frequencies).
