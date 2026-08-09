@@ -32,6 +32,7 @@ body {
   background: var(--page);
   min-height: 100%;
   color-scheme: dark;
+  overflow-x: hidden;
 }
 
 /* —— Top bar —— */
@@ -85,26 +86,6 @@ body {
   grid-template-columns: 280px 1fr;
   height: calc(100vh - 3.25rem);
   align-items: stretch;
-}
-
-@media (max-width: 900px) {
-  .dashboard {
-    grid-template-columns: 1fr;
-    height: auto;
-    min-height: calc(100vh - 3.25rem);
-  }
-
-  .sidebar {
-    position: relative;
-    height: auto;
-    max-height: none;
-    border-right: none;
-    border-bottom: 1px solid var(--divider);
-  }
-
-  .sidebar-form {
-    max-height: 50vh;
-  }
 }
 
 .sidebar {
@@ -900,10 +881,12 @@ select {
 }
 
 .table-scroll {
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
   max-height: 420px;
   border-radius: 12px;
   background: var(--input-surface);
+  -webkit-overflow-scrolling: touch;
 }
 
 .series-table {
@@ -988,12 +971,6 @@ select {
   align-items: start;
 }
 
-@media (max-width: 800px) {
-  .allocation-block {
-    grid-template-columns: 1fr;
-  }
-}
-
 .allocation-summary h2,
 .allocation-chart h2 {
   margin: 0 0 0.5rem;
@@ -1053,4 +1030,154 @@ select {
 .table-scroll::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.18);
   border-radius: var(--radius-pill);
+}
+
+/* —— Mobile / tablet quick pass (single breakpoint) —— */
+@media (max-width: 768px) {
+  .top-bar {
+    padding: 0.75rem 1rem;
+    gap: 0.65rem;
+    align-items: flex-start;
+  }
+
+  .brand {
+    font-size: 0.98rem;
+    line-height: 1.3;
+  }
+
+  .github-link {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.55rem;
+  }
+
+  .dashboard {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: calc(100vh - 3.25rem);
+  }
+
+  .sidebar {
+    position: relative;
+    height: auto;
+    max-height: none;
+    border-right: none;
+    border-bottom: 1px solid var(--divider);
+    overflow: visible;
+  }
+
+  .sidebar-tabs {
+    padding: 0.75rem 0.85rem 0.65rem;
+  }
+
+  .tab-btn {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .sidebar-form {
+    max-height: min(48vh, 420px);
+    padding: 0.65rem 0.85rem 1.1rem;
+  }
+
+  .sidebar-form input:not([type="checkbox"]),
+  .sidebar-form select,
+  .sidebar-form .scale-toggle-btn {
+    min-height: 44px;
+  }
+
+  .sidebar-form label:has(input[type="checkbox"]) {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .sidebar-form input[type="checkbox"] {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex-shrink: 0;
+  }
+
+  .main-area {
+    height: auto;
+    overflow: visible;
+    padding: 1rem 0.85rem 2rem;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .stat {
+    padding: 0.95rem 0.9rem;
+    min-width: 0;
+  }
+
+  .stat-secondary {
+    padding: 0.75rem 0.8rem;
+  }
+
+  .chart-heading {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .chart-heading-actions {
+    flex-wrap: wrap;
+  }
+
+  .scale-toggle-btn {
+    min-height: 36px;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .chart-frame {
+    height: 200px;
+  }
+
+  .chart-frame-balance {
+    height: 240px;
+  }
+
+  .chart-frame-takehome {
+    height: 240px;
+  }
+
+  .chart-frame-pie {
+    height: 280px;
+  }
+
+  .allocation-block {
+    grid-template-columns: 1fr;
+  }
+
+  .table-scroll {
+    max-height: 360px;
+    /* Keep wide series table scrolling inside this container only. */
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+
+  .series-table {
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .btn {
+    min-height: 44px;
+    padding: 0.7rem 1.15rem;
+  }
+
+  .extra-detail {
+    padding: 1rem 1rem;
+  }
+
+  .extra-detail > summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
 }

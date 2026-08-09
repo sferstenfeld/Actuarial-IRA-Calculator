@@ -1,68 +1,55 @@
 # Actuarial IRA Projection Model
 
+A Roth IRA retirement calculator with progressive federal tax modeling, real IRS eligibility rules, and actuarial career projections. Rebuilt from an Excel Exam FM model into a FastAPI web app.
+
 ## Table of Contents
 
 - [Overview](#overview)
-- [Project Highlights](#project-highlights)
+- [Why I Built This](#why-i-built-this)
+- [Live Demo](#live-demo)
 - [Screenshots](#screenshots)
-- [Workbook Structure](#workbook-structure)
-- [How to Use](#how-to-use)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Setup](#setup)
 - [Methodology](#methodology)
 - [Assumptions and Limitations](#assumptions-and-limitations)
 - [Quality Assurance](#quality-assurance)
-- [Future Improvements](#future-improvements)
 - [About Me](#about-me)
 - [Suggestions](#suggestions)
 
 ## Overview
 
-This project is an Excel-based Roth IRA projection model that applies Actuarial Exam Financial Mathematics (FM) concepts to a realistic personal finance and actuarial career scenario. I built the model to show how contribution timing, investment returns, inflation, IRA contribution limits, salary growth, taxes, and career progression can affect long-term retirement outcomes.
+This project is a Roth IRA projection model that applies Actuarial Exam Financial Mathematics (FM) concepts to a realistic personal finance and actuarial career scenario. Originally built in Excel and rebuilt as a FastAPI web app, it shows how contribution timing, investment returns, inflation, IRA contribution limits, salary growth, taxes, and career progression can affect long-term retirement outcomes.
 
-The workbook uses a transparent year-by-year calculation engine so users can follow how each assumption affects the results. It also supports periodic contributions, including monthly, weekly, and advanced trading-day contribution schedules.
+The app uses a transparent year-by-year calculation engine so users can follow how each assumption affects the results. It also supports periodic contributions, including monthly, weekly, and advanced trading-day contribution schedules.
 
 In addition to projecting Roth IRA balances, the model estimates gross salary, federal income tax, payroll taxes, optional state income tax, disposable take-home pay, retirement milestones, and what-if scenarios.
 
-This project is intended to demonstrate my understanding of time value of money, annuities, compound interest, spreadsheet modeling, assumption management, and actuarial-style quality control. It is an educational model and is not intended to provide tax, legal, investment, or financial advice.
+This project is intended to demonstrate my understanding of time value of money, annuities, compound interest, financial modeling, assumption management, and actuarial-style quality control. It is an educational model and is not intended to provide tax, legal, investment, or financial advice.
 
-## Project Highlights
+## Why I Built This
 
+I built this project because most popular online Roth IRA calculators are too simplified for long-horizon planning. Tools like [NerdWallet](https://www.nerdwallet.com/investing/calculators/roth-ira-calculator) or [Calculator.net](https://www.calculator.net/ira-calculator.html) are useful for a quick estimate, but they treat annual contributions as a flat input held constant for decades. In reality, IRS IRA contribution limits (and catch-up amounts) are inflation-indexed over time, so a multi-decade projection that never lifts that ceiling understates how much a disciplined saver can put away.
 
+Those calculators also leave out much of the surrounding tax and eligibility mechanics that shape Roth outcomes over a career. NerdWallet applies current-year income limits to size this year's contribution, but neither tool projects inflation-indexed contribution ceilings forward, and neither models year-by-year progressive federal brackets, payroll taxes, evolving MAGI phase-outs (including Direct vs Backdoor paths), or contribution caps tied to earned income. Few of them model an actuarial-style career path with exam and credential raises.
+
+I first built the model in Excel. That workbook was the right place to get the math right: a transparent year-by-year engine for Exam FM time-value-of-money logic, progressive taxes, IRA limits, and career assumptions. It became a separate audited reference model and the foundational building block for this app's engine logic. I used it for independent verification while rebuilding the calculations in Python, not as a downloadable deliverable in this repository.
+
+The limitation was the product experience. Spreadsheet tabs multiplied as the model grew, and there was no cohesive dashboard. With as many inputs and paths as the scenario allows (visible in the live app), I could not keep the variable inputs on one usable surface alongside the outputs, charts, and what-if comparisons. That friction is what pushed the next step: the same verified engine, rebuilt as a FastAPI web app with a single interactive interface.
+
+## Live Demo
+
+Try the app here: [https://actuarial-ira-calculator.onrender.com/](https://actuarial-ira-calculator.onrender.com/)
 
 ## Screenshots
 
-## Workbook Structure
+## Features
 
-#### README
+## Tech Stack
 
-#### INPUTS
+The backend is a Python FastAPI service with Pydantic-validated inputs and a single `POST /api/calculate` endpoint that returns the full projection as JSON. The frontend is vanilla HTML, CSS, and JavaScript with no build step, and Chart.js (via CDN) for the charts. The UI is a dark, fintech-style layout with two tabs: Calculator Overview for the main projection, and What-If Scenario for isolated shadow calculations.
 
-#### OUTPUT - SUMMARY
-
-#### OUTPUT - RETIREMENT
-
-#### OUTPUT - CASH FLOW
-
-#### WHAT-IF SCENARIOS
-
-#### MILESTONES
-
-#### ENGINE
-
-#### PERIODIC ENGINE
-
-#### CONSTANTS & REFERENCES
-
-#### CHARTDATA 
-
-## How to Use
-
-1) Download the `.xlsx` file from the repository. 
-
-2) Open the 'INPUTS' worksheet.
-
-3) Edit the highlighted cells
-
-4) Review the outputs and scenarios.
+## Setup
 
 ## Methodology
 
@@ -151,15 +138,11 @@ The model does not include every factor that affects a real tax return. Excluded
 
 Salary growth and actuarial career progression are user-defined assumptions. Exam raises, credential raises, merit increases, and salary caps are not forecasts of any particular employer or actuarial career path.
 
-Investment returns, inflation, salary growth, contribution growth, and tax assumptions are deterministic. The model does not randomly simulate market volatility, sequence-of-returns risk, unemployment, or changing household circumstances. However, the `WHAT-IF SCENARIOS` sheet includes a user-defined contribution gap or career-break scenario that allows the user to specify a gap start year and gap length. This scenario is deterministic and does not model the probability, salary impact, or timing uncertainty of an actual career interruption.
+Investment returns, inflation, salary growth, contribution growth, and tax assumptions are deterministic. The model does not randomly simulate market volatility, sequence-of-returns risk, unemployment, or changing household circumstances. However, the What-If Scenario tab includes a user-defined contribution gap or career-break scenario that allows the user to specify a gap start year and gap length. These scenarios run as isolated shadow calculations and do not change the base model. The gap scenario is deterministic and does not model the probability, salary impact, or timing uncertainty of an actual career interruption.
 
 This project is for educational and portfolio purposes only. It is not tax, legal, actuarial, investment, or financial advice.
 
 ## Quality Assurance
-
-## Files
-
-## Future Improvements
 
 ## About Me
 
@@ -171,4 +154,4 @@ I am especially interested in combining financial mathematics, Excel modeling, a
 
 ## Suggestions
 
-If you have any suggestions to make or find any quality assurance issues (bugs), please email me at sferstenfeld@gmail.com.
+If you have any suggestions to make or find any quality assurance issues (bugs), please email me at [sferstenfeld@gmail.com](mailto:sferstenfeld@gmail.com).

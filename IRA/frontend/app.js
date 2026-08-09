@@ -885,8 +885,11 @@ function deltaCell(value, base) {
   return `<td class="${cls}">${sign}${money(d)}</td>`;
 }
 
-function scenarioTableWithDeltas(title, rows, baseNominal) {
+function scenarioTableWithDeltas(title, rows, baseValue, { deltaField = "nominal" } = {}) {
   if (!rows || !rows.length) return "";
+  const valueOf = (r) =>
+    deltaField === "real" ? r.final_balance_real : r.final_balance_nominal;
+  const deltaHeader = deltaField === "real" ? "Δ real vs base" : "Δ vs base";
   const body = rows
     .map((r) => {
       const isBase = r.label === "Base";
@@ -898,14 +901,14 @@ function scenarioTableWithDeltas(title, rows, baseNominal) {
         `<td>${money(r.final_balance_real)}</td>` +
         (isBase
           ? `<td class="delta-zero">—</td>`
-          : deltaCell(r.final_balance_nominal, baseNominal)) +
+          : deltaCell(valueOf(r), baseValue)) +
         `</tr>`
       );
     })
     .join("");
   return (
     `<h3 class="scenario-title">${title}</h3>` +
-    `<table><thead><tr><th>Case</th><th>Param</th><th>Nominal</th><th>Real</th><th>Δ vs base</th></tr></thead>` +
+    `<table><thead><tr><th>Case</th><th>Param</th><th>Nominal</th><th>Real</th><th>${deltaHeader}</th></tr></thead>` +
     `<tbody>${body}</tbody></table>`
   );
 }
@@ -941,8 +944,16 @@ function renderRequiredReturn(data) {
 function renderScenarios(data) {
   const s = data.scenarios;
   const baseNom = data.final_balance_periodic;
-  let html = scenarioTableWithDeltas("Return Bear / Base / Bull", s.return_cases, baseNom);
-  html += scenarioTableWithDeltas("Inflation swing (nominal held fixed)", s.inflation_cases, baseNom);
+  const baseReal = data.final_balance_real_periodic;
+  let html = scenarioTableWithDeltas("Return Bear / Base / Bull", s.return_cases, baseNom, {
+    deltaField: "nominal",
+  });
+  html += scenarioTableWithDeltas(
+    "Inflation swing (nominal held fixed)",
+    s.inflation_cases,
+    baseReal,
+    { deltaField: "real" }
+  );
 
   if (s.contribution_gap) {
     const g = s.contribution_gap;
