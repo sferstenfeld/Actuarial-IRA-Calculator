@@ -1,6 +1,6 @@
 # Actuarial IRA Projection Model
 
-A Roth IRA retirement calculator with progressive federal tax modeling, real IRS eligibility rules, and actuarial career projections. Rebuilt from an Excel Exam FM model into a FastAPI web app.
+A Roth IRA retirement calculator with progressive federal tax modeling, real IRS eligibility rules, and actuarial career projections. 
 
 ## Table of Contents
 
@@ -14,6 +14,7 @@ A Roth IRA retirement calculator with progressive federal tax modeling, real IRS
 - [Methodology](#methodology)
 - [Assumptions and Limitations](#assumptions-and-limitations)
 - [Quality Assurance](#quality-assurance)
+- [Future Improvements](#future-improvements)
 - [About Me](#about-me)
 - [Suggestions](#suggestions)
 
@@ -124,6 +125,30 @@ Federal income tax is calculated progressively by applying each marginal rate on
 
 Future federal tax thresholds and standard deductions use the same simplified indexing framework. The user’s inflation assumption is treated as CPI inflation, and the model estimates C-CPI-U inflation as approximately 90.1% of that rate based on historical data since C-CPI-U became available. For example, a 3.0% CPI assumption produces a modeled C-CPI-U rate of approximately 2.7%.
 
+#### Required Return Solver
+
+The What-If Scenario tab can solve for the constant annual effective return needed to reach a user-specified retirement balance, given the same contribution schedule, timing, and other base-case assumptions. This is an Exam FM-style unknown-rate problem: find \(r\) such that the projected ending balance equals a target.
+
+If the user enters a real (inflation-adjusted) target, the solver first converts it to a nominal target using the model’s inflation path:
+
+$$
+T_{\text{nominal}} = T_{\text{real}} \cdot (1+\pi)^{N_{\pi}}
+$$
+
+where \(\pi\) is the assumed annual inflation rate and \(N_{\pi}\) is the number of inflation years used elsewhere in the projection. The solve itself is always performed against this nominal target.
+
+Let \(B(r)\) be the final nominal balance from the periodic accumulation engine when the annual return equals \(r\), holding every other input fixed. The solver searches for a root of the gap function
+
+$$
+g(r) = B(r) - T_{\text{nominal}}
+$$
+
+Conceptually, \(B(r)\) is the future value of the starting balance plus each contribution grown at rate \(r\) for the remaining investment periods (with Beginning vs End timing already embedded in the engine). Because a higher return produces a higher ending balance, \(g(r)\) is smooth and monotonically increasing in \(r\), so a single root is well-defined when the target is reachable.
+
+The implementation does not rely on a spreadsheet Goal-Seek workaround. It brackets the root on \([0, 0.05]\) and doubles the upper bound until \(g\) changes sign (or reports that the target is unreachable within a 1000% annual return search limit). It then applies numerical bisection until the gap or interval width falls below a tight tolerance. If the target is already reachable at a 0% return, the solver reports 0%.
+
+The solve runs as an isolated shadow calculation: it does not overwrite the main model’s assumed return or regenerate the base-case charts.
+
 ## Assumptions and Limitations
 
 The IRA indexing results are illustrative rather than official IRS forecasts. The IRS publishes the final contribution limits, but it does not publish the intermediate unrounded index used to determine each future limit. If the actual 2026 underlying index differs from the published $7,500 regular limit or $1,100 catch-up limit used as the model’s starting index, future modeled step increases could occur earlier or later than the official limits.
@@ -144,11 +169,17 @@ This project is for educational and portfolio purposes only. It is not tax, lega
 
 ## Quality Assurance
 
+## Future Improvements
+
+One direction I may add is optional Traditional IRA contributions alongside the current Roth path, including a comparison analysis for when each account type is more advantageous. That could include scenarios where it makes sense to prefer Traditional early, Roth later, or the reverse, depending on projected tax brackets, take-home pay, and retirement tax assumptions.
+
+Another direction is to move beyond fixed expected return and inflation assumptions. I am considering stochastic processes and Monte Carlo simulation driven by historical market returns, or by return distributions for selected investment classes, so outcomes can be shown as a range of paths rather than a single deterministic projection.
+
 ## About Me
 
 I am an Actuarial Science and Economics student entering my senior year and preparing for a career in actuarial analysis and risk management. I built this project to strengthen and apply my understanding of Exam FM concepts while exploring how actuarial modeling can be applied to personal finance and career planning.
 
-I am especially interested in combining financial mathematics, Excel modeling, and clear communication to build models that are both technically sound and easy to understand.
+I am especially interested in combining financial mathematics, Excel and Python modeling, and clear communication to build models that are both technically sound and easy to understand.
 
 [LinkedIn](https://www.linkedin.com/in/sferst/) | [GitHub](https://github.com/sferstenfeld)
 
