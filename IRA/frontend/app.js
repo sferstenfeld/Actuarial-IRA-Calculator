@@ -40,6 +40,44 @@ function numOrNull(name) {
   return Number(v);
 }
 
+/**
+ * Assign input.value only when it actually changes. Blind reassignment
+ * resets caret/selection even when the displayed text is identical — which
+ * races with click/select when a debounced recalc fires.
+ */
+function updateInputIfChanged(inputElement, newValue) {
+  const next = String(newValue);
+  if (inputElement.value === next) return;
+  const selStart = inputElement.selectionStart;
+  const selEnd = inputElement.selectionEnd;
+  inputElement.value = next;
+  if (document.activeElement === inputElement) {
+    try {
+      // type=number may not support selection APIs in every browser
+      if (selStart != null && selEnd != null) {
+        inputElement.setSelectionRange(selStart, selEnd);
+      }
+    } catch (_) {
+      /* ignore */
+    }
+  }
+}
+
+/** Skip attribute writes on the focused control; otherwise only if changed. */
+function updateAttrIfChanged(el, attr, newValue) {
+  if (document.activeElement === el) return;
+  const next = String(newValue);
+  if (el.getAttribute(attr) === next) return;
+  el.setAttribute(attr, next);
+}
+
+/** Skip class toggles on the focused control; otherwise only if changed. */
+function updateClassFlag(el, className, shouldHave) {
+  if (document.activeElement === el) return;
+  if (el.classList.contains(className) === shouldHave) return;
+  el.classList.toggle(className, shouldHave);
+}
+
 function toggleVisibility() {
   const freq = form.elements.contribution_frequency.value;
   document.querySelectorAll(".advanced-only").forEach((el) => {
@@ -71,16 +109,16 @@ function validateSalaryCap() {
   const errEl = $("#salaryCapError");
   const start = Number(form.elements.starting_salary.value);
   if (Number.isFinite(start)) {
-    capInput.min = String(start);
+    updateAttrIfChanged(capInput, "min", start);
   }
   if (!enabled) {
-    capInput.classList.remove("input-invalid");
+    updateClassFlag(capInput, "input-invalid", false);
     if (errEl) errEl.classList.add("hidden");
     return true;
   }
   const cap = Number(capInput.value);
   const ok = Number.isFinite(cap) && Number.isFinite(start) && cap >= start;
-  capInput.classList.toggle("input-invalid", !ok);
+  updateClassFlag(capInput, "input-invalid", !ok);
   if (errEl) errEl.classList.toggle("hidden", ok);
   return ok;
 }
@@ -157,6 +195,44 @@ function pct(n, digits = 1) {
 function setStatus(msg, kind) {
   statusEl.textContent = msg;
   statusEl.className = `status${kind ? ` ${kind}` : ""}`;
+}
+
+function humanizeFieldName(name) {
+  return String(name || "input")
+    .replace(/_pct$/, "")
+    .replace(/_/g, " ");
+}
+
+/** Turn FastAPI/Pydantic error bodies into a short readable status line. */
+function formatApiError(errBody, fallback = "Something went wrong. Please check your inputs.") {
+  const detail = errBody?.detail;
+  if (Array.isArray(detail)) {
+    const parts = detail.map((err) => {
+      let msg = String(err.msg || "invalid value").replace(/^Value error,\s*/i, "");
+      // Custom validators already return a complete sentence after the prefix strip.
+      if (err.type === "value_error") return msg;
+      const loc = Array.isArray(err.loc)
+        ? err.loc.filter((p) => p !== "body" && typeof p === "string")
+        : [];
+      const field = humanizeFieldName(loc[loc.length - 1] || "input");
+      return `${field}: ${msg}`;
+    });
+    return parts.join("; ") || fallback;
+  }
+  if (typeof detail === "string" && detail.trim()) return detail;
+  return fallback;
+}
+
+/** Native min/max (and type) constraints — catch bad values before the API call. */
+function formatConstraintErrors() {
+  const invalids = [...form.querySelectorAll("input:invalid, select:invalid")];
+  if (!invalids.length) return null;
+  return invalids
+    .map((el) => {
+      const field = humanizeFieldName(el.name || el.getAttribute("aria-label") || "input");
+      return `${field}: ${el.validationMessage || "invalid value"}`;
+    })
+    .join("; ");
 }
 
 function fmtMultiple(n, digits = 2) {
@@ -1116,6 +1192,11 @@ async function recalculate() {
     setStatus("Error: salary cap must be ≥ starting salary", "err");
     return;
   }
+  const constraintErr = formatConstraintErrors();
+  if (constraintErr) {
+    setStatus(`Error: ${constraintErr}`, "err");
+    return;
+  }
   setStatus("Calculating…");
   try {
     const payload = readPayload();
@@ -1126,8 +1207,7 @@ async function recalculate() {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      const detail = err.detail ? JSON.stringify(err.detail) : res.statusText;
-      throw new Error(detail);
+      throw new Error(formatApiError(err, res.statusText || undefined));
     }
     const data = await res.json();
     latestData = data;
@@ -1219,6 +1299,14 @@ async function boot() {
   chartDefaults();
   form.addEventListener("input", scheduleRecalc);
   form.addEventListener("change", scheduleRecalc);
+  // Apply deferred min/invalid styling after the user leaves the field —
+  // recalc deliberately skips mutating the focused control.
+  form.addEventListener("blur", (e) => {
+    if (!(e.target instanceof HTMLInputElement)) return;
+    if (e.target.name === "salary_cap" || e.target.name === "starting_salary") {
+      validateSalaryCap();
+    }
+  }, true);
   $("#exportCsv").addEventListener("click", exportCsv);
   document.querySelectorAll("[data-balance-scale]").forEach((btn) => {
     btn.addEventListener("click", () => {

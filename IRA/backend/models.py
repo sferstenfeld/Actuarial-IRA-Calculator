@@ -100,15 +100,17 @@ class CalculateRequest(BaseModel):
     @model_validator(mode="after")
     def _validate(self) -> CalculateRequest:
         if self.retirement_age <= self.starting_age:
-            raise ValueError("retirement_age must be greater than starting_age")
+            raise ValueError("Retirement age must be greater than starting age")
         if self.contribution_frequency == ContributionFrequency.ADVANCED:
             if self.trading_day_interval is None:
-                raise ValueError("trading_day_interval is required when frequency is Advanced")
+                raise ValueError(
+                    "Trading day interval is required when frequency is Advanced"
+                )
             if 252 % self.trading_day_interval != 0:
-                raise ValueError("trading_day_interval must divide 252 evenly")
+                raise ValueError("Trading day interval must divide 252 evenly")
         if self.filing_status_change_enabled and self.target_filing_status is None:
             raise ValueError(
-                "target_filing_status is required when filing_status_change_enabled is true"
+                "Target filing status is required when filing status change is enabled"
             )
         if (
             self.actuary_mode
@@ -116,20 +118,25 @@ class CalculateRequest(BaseModel):
             and self.years_until_fellowship < self.years_until_associate
         ):
             raise ValueError(
-                "years_until_fellowship must be >= years_until_associate "
+                "Years until Fellowship must be greater than or equal to years until Associate "
                 "when credential status is Not yet credentialed"
             )
         if self.cap_salary_growth:
             if self.salary_cap is None:
-                raise ValueError("salary_cap is required when cap_salary_growth is true")
+                raise ValueError(
+                    "Salary cap is required when salary growth cap is enabled"
+                )
             if self.salary_cap < self.starting_salary:
-                raise ValueError("salary_cap must be >= starting_salary")
+                raise ValueError(
+                    "Salary cap must be greater than or equal to starting salary"
+                )
         if self.contribution_gap_length > 0 and self.contribution_gap_start_year is None:
             raise ValueError(
-                "contribution_gap_start_year is required when contribution_gap_length > 0"
+                "Contribution gap start year is required when contribution gap length "
+                "is greater than 0"
             )
         if self.early_stop_age is not None and self.early_stop_age > self.retirement_age:
-            raise ValueError("early_stop_age cannot exceed retirement_age")
+            raise ValueError("Early stop age cannot exceed retirement age")
         return self
 
     def periods_per_year(self) -> int:

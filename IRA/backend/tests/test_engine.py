@@ -501,7 +501,7 @@ def test_merit_only_path_matches_closed_form():
 
 
 def test_fellowship_must_be_after_associate_when_not_credentialed():
-    with pytest.raises(ValueError, match="years_until_fellowship"):
+    with pytest.raises(ValueError, match="Years until Fellowship"):
         _base_req(
             actuary_mode=True,
             credential_status=CredentialStatus.NOT_YET,
@@ -630,7 +630,7 @@ def test_salary_cap_plateaus_after_hit():
 
 
 def test_salary_cap_below_starting_rejected():
-    with pytest.raises(ValueError, match="salary_cap"):
+    with pytest.raises(ValueError, match="Salary cap"):
         _base_req(cap_salary_growth=True, salary_cap=50_000.0, starting_salary=80_000.0)
 
 
