@@ -46,7 +46,13 @@ Try the app here: [https://actuarial-ira-calculator.onrender.com/](https://actua
 
 ## Screenshots
 
+### Calculator Overview
 
+![Calculator Overview](Screenshots/calculator-overview.png)
+
+### What-If Scenario
+
+![What-If Scenario](Screenshots/what-if-scenario.png)
 
 ## Features
 
