@@ -179,6 +179,8 @@ class YearProjection(BaseModel):
     ending_balance_annual: float
     ending_balance_periodic: float
     ending_balance_real_periodic: float
+    # Floor(log2((1+r)^elapsed)) — whole-year doublings of first contribution.
+    cumulative_doublings: int = 0
     tax: YearTaxBreakdown
 
 
@@ -189,6 +191,15 @@ class Milestone(BaseModel):
     age: int | None = None
     year_index: int | None = None
     balance_at_crossing: float | None = None
+
+
+class CompoundingMilestone(BaseModel):
+    """Nth doubling of the first contribution via compound growth alone."""
+
+    doubling_number: int
+    age: float
+    from_multiple: float
+    to_multiple: float
 
 
 class ScenarioCase(BaseModel):
@@ -228,7 +239,9 @@ class CalculateResponse(BaseModel):
     vintage_cross_check_ok: bool
     years_contribution_capped_by_income: int = 0
     milestones: list[Milestone]
+    nominal_balance_milestones: list[Milestone] = []
     salary_milestones: list[Milestone] = []
+    compounding_milestones: list[CompoundingMilestone] = []
     scenarios: ScenarioResults
     total_federal_income_tax: float
     total_payroll_tax: float

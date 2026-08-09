@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 from .actuary import build_salary_path
 from .models import (
     CalculateRequest,
     CalculateResponse,
+    CompoundingMilestone,
     ContributionTiming,
     Milestone,
     YearProjection,
@@ -24,6 +26,15 @@ from .tax import (
 
 VINTAGE_TOLERANCE = 1e-6
 BALANCE_MILESTONE_PERCENTAGES: tuple[float, ...] = (0.25, 0.50, 0.75)
+NOMINAL_BALANCE_MILESTONE_THRESHOLDS: tuple[float, ...] = (
+    500_000.0,
+    1_000_000.0,
+    2_000_000.0,
+    5_000_000.0,
+    10_000_000.0,
+    20_000_000.0,
+    50_000_000.0,
+)
 SALARY_MILESTONE_THRESHOLDS: tuple[float, ...] = (
     50_000.0,
     75_000.0,
@@ -328,6 +339,81 @@ def compute_balance_milestones(
     return milestones
 
 
+def compute_nominal_balance_milestones(
+    *,
+    starting_age: int,
+    seed: float,
+    year_ending_balances: list[float],
+    thresholds: tuple[float, ...] = NOMINAL_BALANCE_MILESTONE_THRESHOLDS,
+) -> list[Milestone]:
+    """Round-dollar nominal balance crossings at or below final balance."""
+    final = year_ending_balances[-1] if year_ending_balances else seed
+    relevant = [t for t in thresholds if t <= final]
+    milestones: list[Milestone] = []
+    for threshold in relevant:
+        reached, age, year_index, bal = _first_crossing(
+            starting_age=starting_age,
+            seed=seed,
+            year_ending_values=year_ending_balances,
+            threshold=threshold,
+        )
+        if not reached:
+            continue
+        milestones.append(
+            Milestone(
+                label=f"Nominal balance crosses {_fmt_dollars(threshold)}",
+                threshold=threshold,
+                reached=True,
+                age=age,
+                year_index=year_index,
+                balance_at_crossing=bal,
+            )
+        )
+    return milestones
+
+
+def doubling_time_years(annual_return: float) -> float | None:
+    """Exact years to double at continuous annual compounding: ln(2)/ln(1+r)."""
+    if annual_return <= 0:
+        return None
+    return math.log(2.0) / math.log(1.0 + annual_return)
+
+
+def cumulative_doublings_at_elapsed(annual_return: float, elapsed_years: float) -> int:
+    """Whole-year cumulative doublings: floor(log2((1+r)^elapsed))."""
+    if annual_return <= 0 or elapsed_years <= 0:
+        return 0
+    return int(math.floor(math.log2((1.0 + annual_return) ** elapsed_years)))
+
+
+def compute_compounding_milestones(
+    *,
+    starting_age: int,
+    retirement_age: int,
+    annual_return: float,
+) -> list[CompoundingMilestone]:
+    """Fractional-age first-contribution doublings within [start, retirement]."""
+    dt = doubling_time_years(annual_return)
+    if dt is None:
+        return []
+    milestones: list[CompoundingMilestone] = []
+    n = 1
+    while n <= 64:
+        age = starting_age + n * dt
+        if age > retirement_age:
+            break
+        milestones.append(
+            CompoundingMilestone(
+                doubling_number=n,
+                age=age,
+                from_multiple=float(2 ** (n - 1)),
+                to_multiple=float(2**n),
+            )
+        )
+        n += 1
+    return milestones
+
+
 def compute_salary_milestones(
     *,
     starting_age: int,
@@ -487,10 +573,20 @@ def calculate(req: CalculateRequest) -> CalculateResponse:
         seed=req.current_ira_balance,
         year_ending_balances=periodic_ending,
     )
+    nominal_balance_milestones = compute_nominal_balance_milestones(
+        starting_age=req.starting_age,
+        seed=req.current_ira_balance,
+        year_ending_balances=periodic_ending,
+    )
     salary_milestones = compute_salary_milestones(
         starting_age=req.starting_age,
         starting_salary=req.starting_salary,
         salaries=salaries,
+    )
+    compounding_milestones = compute_compounding_milestones(
+        starting_age=req.starting_age,
+        retirement_age=req.retirement_age,
+        annual_return=req.annual_return,
     )
 
     for t in range(years):
@@ -527,6 +623,9 @@ def calculate(req: CalculateRequest) -> CalculateResponse:
                 ending_balance_annual=annual_ending[t],
                 ending_balance_periodic=periodic_ending[t],
                 ending_balance_real_periodic=real_bal,
+                cumulative_doublings=cumulative_doublings_at_elapsed(
+                    req.annual_return, float(t)
+                ),
                 tax=YearTaxBreakdown(
                     year_index=t,
                     age=age,
@@ -585,7 +684,9 @@ def calculate(req: CalculateRequest) -> CalculateResponse:
         vintage_cross_check_ok=cross_ok,
         years_contribution_capped_by_income=years_capped,
         milestones=milestones,
+        nominal_balance_milestones=nominal_balance_milestones,
         salary_milestones=salary_milestones,
+        compounding_milestones=compounding_milestones,
         scenarios=scenarios,
         total_federal_income_tax=total_fed,
         total_payroll_tax=total_payroll,

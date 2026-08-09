@@ -408,6 +408,8 @@ select {
 }
 
 .stat {
+  display: flex;
+  flex-direction: column;
   padding: 1.25rem 1.35rem;
   background: var(--surface);
   border-radius: var(--radius);
@@ -423,6 +425,9 @@ select {
 }
 
 .stat .label {
+  /* Fixed 2-line label zone so wrapped vs single-line titles don't shift values. */
+  min-height: calc(2 * 1.25em);
+  line-height: 1.25;
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -430,6 +435,9 @@ select {
 }
 
 .stat-secondary .label {
+  /* Secondary labels are longer (e.g. growth-multiple titles); reserve 3 lines. */
+  min-height: calc(3 * 1.3em);
+  line-height: 1.3;
   font-size: 0.68rem;
   text-transform: none;
   letter-spacing: 0.01em;
@@ -437,16 +445,19 @@ select {
 }
 
 .stat .value {
-  font-size: 1.15rem;
+  margin-top: 0.35rem;
+  font-size: clamp(0.95rem, 2.4vw, 1.15rem);
   font-weight: 700;
   color: var(--text);
-  margin-top: 0.35rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .stat-secondary .value {
-  font-size: 1rem;
-  font-weight: 600;
   margin-top: 0.25rem;
+  font-size: clamp(0.85rem, 2.1vw, 1rem);
+  font-weight: 600;
   color: var(--accent);
 }
 
@@ -494,6 +505,45 @@ select {
   margin: 0;
 }
 
+.chart-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-shrink: 0;
+}
+
+.scale-toggle {
+  display: inline-flex;
+  padding: 0.15rem;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--divider);
+}
+
+.scale-toggle-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.28rem 0.7rem;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.scale-toggle-btn:hover {
+  color: var(--text);
+}
+
+.scale-toggle-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
 .badge {
   flex-shrink: 0;
   font-size: 0.7rem;
@@ -534,7 +584,13 @@ select {
 }
 
 .chart-frame-pie {
-  height: 260px;
+  height: 340px;
+}
+
+.allocation-chart .chart-frame {
+  max-height: none;
+  width: 100%;
+  overflow: visible;
 }
 
 .chart-frame-takehome {
@@ -575,6 +631,18 @@ select {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
+}
+
+.milestones-caption {
+  margin: 0 0 0.45rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.milestones-empty {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
 }
 
 .milestones li {
@@ -954,10 +1022,6 @@ select {
   border-top: 1px solid var(--divider);
   color: var(--text);
   font-weight: 700;
-}
-
-.allocation-chart .chart-frame {
-  max-height: none;
 }
 
 .sidebar-form fieldset {

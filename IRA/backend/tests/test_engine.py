@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 import pytest
 
 from backend.engine import calculate, periodic_rate, run_annual_engine_kw as run_annual_engine, run_periodic_engine_kw as run_periodic_engine
@@ -1005,6 +1007,115 @@ def test_salary_milestones_empty_when_flat():
         )
     )
     assert resp.salary_milestones == []
+
+
+def test_nominal_balance_milestones_scale_with_final():
+    low = calculate(
+        _base_req(
+            starting_age=40,
+            retirement_age=50,
+            current_ira_balance=0.0,
+            annual_return=0.04,
+            contribution_frequency=ContributionFrequency.ANNUAL,
+            starting_salary=60_000.0,
+            annual_merit_raise=0.02,
+        )
+    )
+    high = calculate(
+        _base_req(
+            starting_age=22,
+            retirement_age=65,
+            current_ira_balance=100_000.0,
+            annual_return=0.10,
+            contribution_frequency=ContributionFrequency.MONTHLY,
+            contribution_timing=ContributionTiming.BEGINNING,
+            starting_salary=150_000.0,
+            annual_merit_raise=0.04,
+        )
+    )
+    assert low.final_balance_periodic < 500_000
+    assert low.nominal_balance_milestones == []
+    assert high.final_balance_periodic >= 5_000_000
+    expected = [
+        t
+        for t in (
+            500_000,
+            1_000_000,
+            2_000_000,
+            5_000_000,
+            10_000_000,
+            20_000_000,
+            50_000_000,
+        )
+        if t <= high.final_balance_periodic
+    ]
+    assert [m.threshold for m in high.nominal_balance_milestones] == expected
+    assert len(expected) >= 4
+    assert all(m.reached for m in high.nominal_balance_milestones)
+    assert all("Nominal balance crosses" in m.label for m in high.nominal_balance_milestones)
+    ages = [m.age for m in high.nominal_balance_milestones]
+    assert ages == sorted(ages)
+    for m in high.nominal_balance_milestones:
+        assert m.balance_at_crossing >= m.threshold
+        assert m.age is not None
+        # Spot-check vs year path when crossing happens after seed.
+        if m.year_index is not None and m.year_index >= 0:
+            assert high.years[m.year_index].ending_balance_periodic >= m.threshold
+            if m.year_index > 0:
+                assert high.years[m.year_index - 1].ending_balance_periodic < m.threshold
+
+
+def test_compounding_doubling_time_at_7_percent():
+    from backend.engine import doubling_time_years
+
+    dt = doubling_time_years(0.07)
+    assert dt == pytest.approx(math.log(2) / math.log(1.07), rel=1e-12)
+    assert dt == pytest.approx(10.244768, abs=1e-5)
+    # Rule of 72 approximation is nearby but not exact.
+    assert abs(dt - (72 / 7)) < 0.1
+
+
+def test_compounding_milestones_list_and_year_column():
+    import math as _math
+
+    resp = calculate(
+        _base_req(
+            starting_age=25,
+            retirement_age=65,
+            annual_return=0.07,
+            annual_inflation=0.02,
+            starting_salary=80_000.0,
+        )
+    )
+    dt = _math.log(2) / _math.log(1.07)
+    assert len(resp.compounding_milestones) >= 3
+    assert resp.compounding_milestones[0].age == pytest.approx(25 + dt, abs=1e-9)
+    assert resp.compounding_milestones[0].from_multiple == 1
+    assert resp.compounding_milestones[0].to_multiple == 2
+    assert resp.compounding_milestones[-1].age <= 65
+    # Next doubling would exceed retirement.
+    assert 25 + (len(resp.compounding_milestones) + 1) * dt > 65
+    # Year column independent of contrib amount / frequency.
+    assert resp.years[0].cumulative_doublings == 0
+    for y in resp.years:
+        expected = (
+            0
+            if y.year_index <= 0
+            else int(_math.floor(_math.log2((1.07) ** y.year_index)))
+        )
+        assert y.cumulative_doublings == expected
+
+
+def test_compounding_milestones_empty_when_no_doubling_fits():
+    resp = calculate(
+        _base_req(
+            starting_age=60,
+            retirement_age=65,
+            annual_return=0.01,
+        )
+    )
+    assert resp.compounding_milestones == []
+    assert all(y.cumulative_doublings == 0 for y in resp.years)
 
 
 def test_short_horizon_balance_milestones_still_compute():

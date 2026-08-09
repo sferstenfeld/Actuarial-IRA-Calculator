@@ -246,7 +246,13 @@
           <div class="chart-block chart-balance">
             <div class="chart-heading">
               <h2>Balance over time</h2>
-              <span id="vintageBadge" class="badge" hidden></span>
+              <div class="chart-heading-actions">
+                <div class="scale-toggle" role="group" aria-label="Balance chart y-axis scale">
+                  <button type="button" class="scale-toggle-btn active" data-balance-scale="linear" aria-pressed="true">Linear</button>
+                  <button type="button" class="scale-toggle-btn" data-balance-scale="log" aria-pressed="false">Log</button>
+                </div>
+                <span id="vintageBadge" class="badge" hidden></span>
+              </div>
             </div>
             <div class="chart-frame chart-frame-balance">
               <canvas id="balanceChart"></canvas>
@@ -283,9 +289,19 @@
             <h3 class="milestones-subhead">Balance milestones</h3>
             <ul id="milestones" class="milestones"></ul>
           </div>
+          <div id="nominalMilestonesGroup" class="milestones-group" hidden>
+            <h3 class="milestones-subhead">Nominal balance milestones</h3>
+            <ul id="nominalMilestones" class="milestones"></ul>
+          </div>
           <div id="salaryMilestonesGroup" class="milestones-group" hidden>
             <h3 class="milestones-subhead">Salary milestones</h3>
             <ul id="salaryMilestones" class="milestones"></ul>
+          </div>
+          <div id="compoundingMilestonesGroup" class="milestones-group">
+            <h3 class="milestones-subhead">Compounding milestones</h3>
+            <p class="milestones-caption">How many times your money doubles through compound growth alone, based on the Rule of 72.</p>
+            <ul id="compoundingMilestones" class="milestones"></ul>
+            <p id="compoundingMilestonesEmpty" class="milestones-empty miss" hidden>Not enough time for a full doubling at this return rate</p>
           </div>
         </details>
 

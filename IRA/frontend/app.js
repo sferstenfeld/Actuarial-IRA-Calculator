@@ -23,6 +23,10 @@ let contribChart;
 let takeHomeChart;
 let taxChart;
 let allocationChart;
+/** Persists across recalcs; only user toggle changes this. */
+let balanceYScale = "linear";
+/** Log-axis floor — keeps the chart in the informative $1k+ range. */
+const LOG_AXIS_MIN = 1_000;
 let debounceTimer;
 let latestData = null;
 
@@ -173,7 +177,7 @@ function renderSummary(data) {
     ["Final nominal balance", money(periodic)],
     ["Final real balance", money(data.final_balance_real_periodic)],
     ["Total contributions", money(contribs)],
-    ["Lifetime tax", moneyTax(data.total_tax)],
+    ["Lifetime tax", money(data.total_tax)],
   ];
   const secondary = [
     ["First contribution’s growth multiple", fmtMultiple(firstGm)],
@@ -237,11 +241,55 @@ function chartDefaults() {
   Chart.defaults.scale.grid.drawTicks = false;
 }
 
+function formatMoneyAxisTick(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0) return "";
+  if (n >= 1e6) {
+    const m = n / 1e6;
+    return `$${Number.isInteger(m) || m >= 10 ? m.toFixed(0) : m.toFixed(1)}M`;
+  }
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}k`;
+  if (n === 0) return "$0";
+  return `$${Math.round(n)}`;
+}
+
 function axisMoneyTicks() {
   return {
-    callback: (v) =>
-      v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${(v / 1e3).toFixed(0)}k`,
+    callback: formatMoneyAxisTick,
   };
+}
+
+/**
+ * Replace Chart.js's default log major+minor tick set with a single decade list.
+ * Filtering via callback alone still left competing tick slots and clipped labels.
+ */
+function buildLogDecadeTicks(axis) {
+  const floor = Math.max(Number(axis.options.min) || LOG_AXIS_MIN, LOG_AXIS_MIN);
+  const ceiling = Math.max(Number(axis.max) || floor, floor);
+  const startExp = Math.ceil(Math.log10(floor) - 1e-12);
+  const endExp = Math.floor(Math.log10(ceiling) + 1e-12);
+  const ticks = [];
+  for (let e = startExp; e <= endExp; e++) {
+    ticks.push({ value: 10 ** e });
+  }
+  if (!ticks.length) {
+    ticks.push({ value: 10 ** Math.max(0, Math.round(Math.log10(ceiling))) });
+  }
+  axis.ticks = ticks;
+}
+
+/** Drop values below the log floor (incl. $0 delay years) so they sit off-chart. */
+function seriesForBalanceScale(values, useLog) {
+  if (!useLog) return values;
+  return values.map((v) => (v == null || v < LOG_AXIS_MIN ? null : v));
+}
+
+function syncBalanceScaleToggle() {
+  document.querySelectorAll("[data-balance-scale]").forEach((btn) => {
+    const active = btn.dataset.balanceScale === balanceYScale;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-pressed", active ? "true" : "false");
+  });
 }
 
 /** Destroy any Chart.js instance on this canvas and create a fresh one.
@@ -305,6 +353,8 @@ function renderPrimaryCharts(data) {
     return runningContrib;
   });
   const commonOpts = moneyAxisOptions();
+  const useLog = balanceYScale === "log";
+  syncBalanceScaleToggle();
 
   balanceChart = mountChart($("#balanceChart"), {
     type: "line",
@@ -313,29 +363,97 @@ function renderPrimaryCharts(data) {
       datasets: [
         {
           label: "Periodic nominal",
-          data: nominalPeriodic,
+          data: seriesForBalanceScale(nominalPeriodic, useLog),
           borderColor: ACCENT,
           backgroundColor: ACCENT,
           borderWidth: 2.5,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointStyle: "rect",
+          spanGaps: useLog,
         },
         {
           label: "Periodic real",
-          data: real,
+          data: seriesForBalanceScale(real, useLog),
           borderColor: SERIES_TERTIARY,
           backgroundColor: SERIES_TERTIARY,
           borderDash: [2, 2],
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointStyle: "rect",
+          spanGaps: useLog,
         },
         {
           label: "Total contributions",
-          data: cumulativeContributions,
+          data: seriesForBalanceScale(cumulativeContributions, useLog),
           borderColor: TAKEHOME_STATE,
           backgroundColor: TAKEHOME_STATE,
           borderWidth: 2,
           borderDash: [6, 4],
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointStyle: "rect",
+          spanGaps: useLog,
         },
       ],
     },
-    options: commonOpts,
+    options: chartFillOptions({
+      plugins: {
+        legend: {
+          position: "top",
+          labels: {
+            color: MUTED,
+            // Solid legend swatches for all series (including dashed lines on the plot).
+            usePointStyle: true,
+            pointStyle: "rect",
+            boxWidth: 12,
+            boxHeight: 12,
+          },
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const i = ctx.dataIndex;
+              const raw =
+                ctx.datasetIndex === 0
+                  ? nominalPeriodic[i]
+                  : ctx.datasetIndex === 1
+                    ? real[i]
+                    : cumulativeContributions[i];
+              return `${ctx.dataset.label}: ${money(raw)}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: "Age", color: MUTED },
+          ticks: { color: MUTED },
+          grid: { display: false, drawBorder: false },
+          border: { display: false },
+        },
+        y: useLog
+          ? {
+              type: "logarithmic",
+              min: LOG_AXIS_MIN,
+              ticks: {
+                color: MUTED,
+                // Single formatter only — decade list comes from afterBuildTicks.
+                callback: formatMoneyAxisTick,
+                padding: 6,
+              },
+              afterBuildTicks: buildLogDecadeTicks,
+              grid: { color: GRID, drawBorder: false },
+              border: { display: false },
+            }
+          : {
+              type: "linear",
+              ticks: { ...axisMoneyTicks(), color: MUTED },
+              grid: { color: GRID, drawBorder: false },
+              border: { display: false },
+            },
+      },
+    }),
   });
 
   purchasingPowerChart = mountChart($("#purchasingPowerChart"), {
@@ -622,7 +740,7 @@ function renderTaxSummaryAndAllocation(data) {
 
   const slices = [
     {
-      label: "Remaining income (after tax & Roth)",
+      label: "Remaining income\n(after tax & Roth)",
       value: remaining,
       color: PIE[0],
     },
@@ -670,17 +788,27 @@ function renderTaxSummaryAndAllocation(data) {
       ],
     },
     options: chartFillOptions({
+      layout: {
+        padding: { top: 4, bottom: 4, left: 4, right: 4 },
+      },
       plugins: {
         legend: {
-          position: "right",
-          labels: { boxWidth: 12, padding: 12, color: MUTED },
+          position: "bottom",
+          align: "center",
+          labels: {
+            boxWidth: 12,
+            padding: 14,
+            color: MUTED,
+            textAlign: "left",
+          },
         },
         tooltip: {
           callbacks: {
             label: (ctx) => {
               const v = ctx.parsed;
               const share = gross > 0 ? (v / gross) * 100 : 0;
-              return `${ctx.label}: ${money(v)} (${share.toFixed(1)}%)`;
+              const name = String(ctx.label || "").replace(/\n/g, " ");
+              return `${name}: ${money(v)} (${share.toFixed(1)}%)`;
             },
           },
         },
@@ -701,18 +829,53 @@ function renderMilestones(data) {
     })
     .join("");
 
+  const nominalList = data.nominal_balance_milestones || [];
+  const nominalGroup = $("#nominalMilestonesGroup");
+  const nominalUl = $("#nominalMilestones");
+  if (!nominalList.length) {
+    nominalGroup.hidden = true;
+    nominalUl.innerHTML = "";
+  } else {
+    nominalGroup.hidden = false;
+    nominalUl.innerHTML = nominalList
+      .map((m) => `<li class="hit">${m.label} at age ${m.age}</li>`)
+      .join("");
+  }
+
   const salaryList = data.salary_milestones || [];
   const salaryGroup = $("#salaryMilestonesGroup");
   const salaryUl = $("#salaryMilestones");
   if (!salaryList.length) {
     salaryGroup.hidden = true;
     salaryUl.innerHTML = "";
-    return;
+  } else {
+    salaryGroup.hidden = false;
+    salaryUl.innerHTML = salaryList
+      .map((m) => `<li class="hit">${m.label} at age ${m.age}</li>`)
+      .join("");
   }
-  salaryGroup.hidden = false;
-  salaryUl.innerHTML = salaryList
-    .map((m) => `<li class="hit">${m.label} at age ${m.age}</li>`)
-    .join("");
+
+  const compoundingList = data.compounding_milestones || [];
+  const compoundingUl = $("#compoundingMilestones");
+  const compoundingEmpty = $("#compoundingMilestonesEmpty");
+  if (!compoundingList.length) {
+    compoundingUl.innerHTML = "";
+    compoundingEmpty.hidden = false;
+  } else {
+    compoundingEmpty.hidden = true;
+    compoundingUl.innerHTML = compoundingList
+      .map((m, i) => {
+        const from = Number(m.from_multiple).toFixed(0);
+        const to = Number(m.to_multiple).toFixed(0);
+        const age = Number(m.age).toFixed(1);
+        const lead =
+          i === 0
+            ? `Money doubles (${from}x → ${to}x)`
+            : `Doubles again (${from}x → ${to}x)`;
+        return `<li class="hit">${lead} by age ${age}</li>`;
+      })
+      .join("");
+  }
 }
 
 function deltaCell(value, base) {
@@ -818,6 +981,7 @@ const SERIES_COLS = [
   { key: "bal_periodic", label: "Bal. periodic", fmt: (y) => money(y.ending_balance_periodic) },
   { key: "bal_real", label: "Bal. real", fmt: (y) => money(y.ending_balance_real_periodic) },
   { key: "gm", label: "Growth mult.", fmt: (y) => y.growth_multiple.toFixed(4) },
+  { key: "doublings", label: "Cumul. doublings", fmt: (y) => y.cumulative_doublings ?? 0 },
   { key: "tv", label: "Terminal value", fmt: (y) => money(y.terminal_value) },
   { key: "fed", label: "Federal tax", fmt: (y) => moneyTax(y.tax.federal_income_tax) },
   { key: "oasdi", label: "OASDI", fmt: (y) => moneyTax(y.tax.oasdi_tax) },
@@ -874,6 +1038,7 @@ function exportCsv() {
     "ending_balance_periodic",
     "ending_balance_real_periodic",
     "growth_multiple",
+    "cumulative_doublings",
     "terminal_value",
     "federal_income_tax",
     "oasdi_tax",
@@ -898,6 +1063,7 @@ function exportCsv() {
         y.ending_balance_periodic,
         y.ending_balance_real_periodic,
         y.growth_multiple,
+        y.cumulative_doublings ?? 0,
         y.terminal_value,
         y.tax.federal_income_tax,
         y.tax.oasdi_tax,
@@ -1043,6 +1209,16 @@ async function boot() {
   form.addEventListener("input", scheduleRecalc);
   form.addEventListener("change", scheduleRecalc);
   $("#exportCsv").addEventListener("click", exportCsv);
+  document.querySelectorAll("[data-balance-scale]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const next = btn.dataset.balanceScale;
+      if (!next || next === balanceYScale) return;
+      balanceYScale = next;
+      syncBalanceScaleToggle();
+      if (latestData) requestAnimationFrame(() => renderPrimaryCharts(latestData));
+    });
+  });
+  syncBalanceScaleToggle();
   toggleVisibility();
   // Wait for fonts + a settled layout/paint before the first chart create.
   await whenLayoutReady();
