@@ -102,15 +102,23 @@ function toggleVisibility() {
   validateSalaryCap();
 }
 
-/** Cap must be >= starting salary (equal allowed). Below is invalid. */
+/** Cap must be >= starting salary (equal allowed). Below is invalid.
+ *  Relative check is JS/backend only — do NOT push starting_salary into
+ *  the HTML `min` attribute. A stale dynamic min (e.g. from an earlier
+ *  high starting salary) produces browser messages like
+ *  "must be >= 1500000" even when the relative rule is already satisfied.
+ */
 function validateSalaryCap() {
   const enabled = form.elements.cap_salary_growth.checked;
   const capInput = form.elements.salary_cap;
   const errEl = $("#salaryCapError");
   const start = Number(form.elements.starting_salary.value);
-  if (Number.isFinite(start)) {
-    updateAttrIfChanged(capInput, "min", start);
+
+  // Absolute non-negative floor only; keep in sync with markup min="0".
+  if (capInput.getAttribute("min") !== "0") {
+    capInput.setAttribute("min", "0");
   }
+
   if (!enabled) {
     updateClassFlag(capInput, "input-invalid", false);
     if (errEl) errEl.classList.add("hidden");
