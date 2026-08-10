@@ -111,6 +111,8 @@ body {
 .sidebar-form {
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  max-width: 100%;
   overflow-y: auto;
   padding: 0.75rem 0.75rem 1.35rem;
 }
@@ -253,7 +255,9 @@ label.check {
     z-index: 1;
   }
 
-  .info-icon[data-tooltip]:hover {
+  .info-icon[data-tooltip]:hover,
+  .info-icon[data-tooltip]:focus-visible,
+  .info-icon[data-tooltip].tooltip-open {
     z-index: 50;
     color: var(--accent);
     opacity: 1;
@@ -266,7 +270,7 @@ label.check {
     bottom: calc(100% + 8px);
     transform: translateX(-50%);
     width: max-content;
-    max-width: 260px;
+    max-width: min(260px, calc(100vw - 40px));
     box-sizing: border-box;
     background: var(--surface);
     color: var(--text);
@@ -288,9 +292,30 @@ label.check {
     letter-spacing: normal;
   }
 
-  .info-icon[data-tooltip]:hover::after {
+  .info-icon[data-tooltip]:hover::after,
+  .info-icon[data-tooltip]:focus-visible::after,
+  .info-icon[data-tooltip].tooltip-open::after {
     opacity: 1;
     visibility: visible;
+  }
+
+  /* Edge-aware alignment (set by JS from viewport fit) */
+  .info-icon[data-tooltip].tooltip-align-start::after {
+    left: 0;
+    right: auto;
+    transform: none;
+  }
+
+  .info-icon[data-tooltip].tooltip-align-end::after {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (max-width: 768px) {
+  .info-icon[data-tooltip]::after {
+    max-width: min(200px, calc(100vw - 40px));
   }
 }
 
@@ -1080,6 +1105,8 @@ select {
 
   .sidebar-tabs {
     padding: 0.75rem 0.85rem 0.65rem;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .tab-btn {
@@ -1091,6 +1118,16 @@ select {
   .sidebar-form {
     max-height: min(48vh, 420px);
     padding: 0.65rem 0.85rem 1.1rem;
+    min-width: 0;
+    max-width: 100%;
+    /* Tooltips / wide absolute content must not create a horizontal scrollbar. */
+    overflow-x: clip;
+    overflow-y: auto;
+  }
+
+  .sidebar-form fieldset {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .sidebar-form input:not([type="checkbox"]),

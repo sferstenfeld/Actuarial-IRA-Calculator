@@ -1295,6 +1295,39 @@ function whenLayoutReady() {
   return Promise.all([fontsReady, nextPaint]);
 }
 
+/** Align info-icon CSS tooltips so they stay inside the viewport. */
+function positionInfoTooltip(icon) {
+  icon.classList.remove("tooltip-align-start", "tooltip-align-end");
+  const rect = icon.getBoundingClientRect();
+  const vw = document.documentElement.clientWidth;
+  const pad = 12;
+  const tipMax = Math.min(
+    window.matchMedia("(max-width: 768px)").matches ? 200 : 260,
+    Math.max(80, vw - 40)
+  );
+  const centerX = rect.left + rect.width / 2;
+  if (centerX - tipMax / 2 < pad) {
+    icon.classList.add("tooltip-align-start");
+  } else if (centerX + tipMax / 2 > vw - pad) {
+    icon.classList.add("tooltip-align-end");
+  }
+}
+
+function bindInfoTooltips() {
+  document.querySelectorAll(".info-icon[data-tooltip]").forEach((icon) => {
+    if (!icon.hasAttribute("tabindex")) icon.setAttribute("tabindex", "0");
+    const open = () => {
+      positionInfoTooltip(icon);
+      icon.classList.add("tooltip-open");
+    };
+    const close = () => icon.classList.remove("tooltip-open");
+    icon.addEventListener("pointerenter", open);
+    icon.addEventListener("pointerleave", close);
+    icon.addEventListener("focus", open);
+    icon.addEventListener("blur", close);
+  });
+}
+
 async function boot() {
   chartDefaults();
   form.addEventListener("input", scheduleRecalc);
@@ -1307,6 +1340,7 @@ async function boot() {
       validateSalaryCap();
     }
   }, true);
+  bindInfoTooltips();
   $("#exportCsv").addEventListener("click", exportCsv);
   document.querySelectorAll("[data-balance-scale]").forEach((btn) => {
     btn.addEventListener("click", () => {
