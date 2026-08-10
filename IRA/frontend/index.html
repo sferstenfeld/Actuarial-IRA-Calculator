@@ -126,7 +126,7 @@
               </select>
             </label>
             <label class="status-change-only hidden">Years until change
-              <input type="number" name="years_until_filing_status_change" value="5" min="0" />
+              <input type="number" name="years_until_filing_status_change" value="" min="0" placeholder="optional" />
             </label>
             <label class="check">
               <input type="checkbox" name="include_state_tax" />
@@ -158,25 +158,25 @@
               <span class="label-line">Credential status <span class="info-icon" data-tooltip="If you're already credentialed, we assume your entered starting salary already reflects those career bonuses, so we won't add them again on top." aria-label="More info" role="img">ⓘ</span></span>
                 <select name="credential_status">
                   <option selected>Not yet credentialed</option>
-                  <option>ASA-ACAS</option>
-                  <option>FSA-FCAS</option>
+                  <option value="ASA-ACAS">ASA / ACAS</option>
+                  <option value="FSA-FCAS">FSA / FCAS</option>
                 </select>
               </label>
-              <label>
+              <label data-credential-gate="exam">
               <span class="label-line">Exams remaining <span class="info-icon" data-tooltip="How many actuarial exams you still expect to pass. This caps the total exam-related salary bonus so it doesn't apply indefinitely." aria-label="More info" role="img">ⓘ</span></span>
-                <input type="number" name="exams_remaining" value="7" min="0" />
+                <input type="number" name="exams_remaining" value="10" min="0" />
               </label>
-              <label>
+              <label data-credential-gate="exam">
               <span class="label-line">Years until exams finish <span class="info-icon" data-tooltip="How many years until you expect to finish your remaining exams. Combined with exams remaining, this sets the pace of exam-related raises." aria-label="More info" role="img">ⓘ</span></span>
-                <input type="number" name="years_until_exams_finish" value="7" min="0" />
+                <input type="number" name="years_until_exams_finish" value="8" min="0" />
               </label>
-              <label>Raise per exam $ <input type="number" name="salary_raise_per_exam" value="5000" min="0" step="any" /></label>
-              <label>Associate raise $ <input type="number" name="salary_raise_associate" value="10000" min="0" step="any" /></label>
-              <label>Years until Associate <input type="number" name="years_until_associate" value="4" min="0" /></label>
-              <label>Fellowship raise $ <input type="number" name="salary_raise_fellowship" value="15000" min="0" step="any" /></label>
-              <label>
+              <label data-credential-gate="exam">Raise per exam $ <input type="number" name="salary_raise_per_exam" value="3000" min="0" step="any" /></label>
+              <label data-credential-gate="associate">Associate raise $ <input type="number" name="salary_raise_associate" value="10000" min="0" step="any" /></label>
+              <label data-credential-gate="associate">Years until Associate <input type="number" name="years_until_associate" value="4" min="0" /></label>
+              <label data-credential-gate="fellowship">Fellowship raise $ <input type="number" name="salary_raise_fellowship" value="20000" min="0" step="any" /></label>
+              <label data-credential-gate="fellowship">
               <span class="label-line">Years until Fellowship <span class="info-icon" data-tooltip="Years from today until you expect to reach Fellowship, not years after Associate. This applies the same way regardless of your current credential status." aria-label="More info" role="img">ⓘ</span></span>
-                <input type="number" name="years_until_fellowship" value="8" min="0" />
+                <input type="number" name="years_until_fellowship" value="9" min="0" />
               </label>
             </div>
           </fieldset>
@@ -387,6 +387,7 @@
     </main>
   </div>
 
+  <div id="info-tooltip" role="tooltip" hidden></div>
   <script src="/app.js"></script>
 </body>
 </html>

@@ -247,76 +247,41 @@ label.check {
   user-select: none;
 }
 
-/* Desktop/mouse: tooltip on the info icon only (not the whole label / checkbox) */
-@media (hover: hover) and (pointer: fine) {
-  .info-icon[data-tooltip] {
-    position: relative;
-    cursor: help;
-    z-index: 1;
-  }
-
-  .info-icon[data-tooltip]:hover,
-  .info-icon[data-tooltip]:focus-visible,
-  .info-icon[data-tooltip].tooltip-open {
-    z-index: 50;
-    color: var(--accent);
-    opacity: 1;
-  }
-
-  .info-icon[data-tooltip]::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    left: 50%;
-    bottom: calc(100% + 8px);
-    transform: translateX(-50%);
-    width: max-content;
-    max-width: min(260px, calc(100vw - 40px));
-    box-sizing: border-box;
-    background: var(--surface);
-    color: var(--text);
-    font-size: 0.8125rem;
-    font-weight: 400;
-    line-height: 1.4;
-    padding: 0.5rem 0.75rem;
-    border-radius: 8px;
-    border: 1px solid var(--divider);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity 0.15s ease, visibility 0.15s ease;
-    z-index: 50;
-    white-space: normal;
-    text-align: left;
-    text-transform: none;
-    letter-spacing: normal;
-  }
-
-  .info-icon[data-tooltip]:hover::after,
-  .info-icon[data-tooltip]:focus-visible::after,
-  .info-icon[data-tooltip].tooltip-open::after {
-    opacity: 1;
-    visibility: visible;
-  }
-
-  /* Edge-aware alignment (set by JS from viewport fit) */
-  .info-icon[data-tooltip].tooltip-align-start::after {
-    left: 0;
-    right: auto;
-    transform: none;
-  }
-
-  .info-icon[data-tooltip].tooltip-align-end::after {
-    left: auto;
-    right: 0;
-    transform: none;
-  }
+/* Info-icon tooltips: rendered by JS into #info-tooltip (position:fixed)
+   so sidebar overflow/containment cannot clip them. */
+.info-icon[data-tooltip] {
+  cursor: help;
 }
 
-@media (hover: hover) and (pointer: fine) and (max-width: 768px) {
-  .info-icon[data-tooltip]::after {
-    max-width: min(200px, calc(100vw - 40px));
-  }
+#info-tooltip {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, calc(-100% - 8px));
+  width: max-content;
+  max-width: min(260px, calc(100vw - 32px));
+  box-sizing: border-box;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.4;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--divider);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  white-space: normal;
+  text-align: left;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+#info-tooltip.is-open {
+  opacity: 1;
+  visibility: visible;
 }
 
 label.check input[type="checkbox"] {
@@ -364,6 +329,17 @@ input.input-invalid:focus {
 .field-error {
   color: var(--negative);
   font-weight: 600;
+}
+
+label.field-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+label.field-disabled input,
+label.field-disabled select {
+  cursor: not-allowed;
+  color: var(--muted);
 }
 
 select {
@@ -1120,8 +1096,10 @@ select {
     padding: 0.65rem 0.85rem 1.1rem;
     min-width: 0;
     max-width: 100%;
-    /* Tooltips / wide absolute content must not create a horizontal scrollbar. */
-    overflow-x: clip;
+    /* Inline-size containment stops wide content from expanding the form
+       without clipping absolute tooltips the way overflow-x: clip did. */
+    contain: inline-size;
+    overflow-x: visible;
     overflow-y: auto;
   }
 

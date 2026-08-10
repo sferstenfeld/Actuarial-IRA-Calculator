@@ -40,6 +40,22 @@ function numOrNull(name) {
   return Number(v);
 }
 
+/** Blank optional numbers → 0 (backend ge=0 defaults). */
+function numOrZero(name) {
+  const v = form.elements[name].value;
+  if (v === "" || v == null) return 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** Matches backend bonus_flags / syncCredentialGating active groups. */
+function credentialGateActive(gate) {
+  const status = form.elements.credential_status.value;
+  if (gate === "associate") return status === "Not yet credentialed";
+  if (gate === "exam" || gate === "fellowship") return status !== "FSA-FCAS";
+  return true;
+}
+
 /**
  * Assign input.value only when it actually changes. Blind reassignment
  * resets caret/selection even when the displayed text is identical — which
@@ -99,7 +115,29 @@ function toggleVisibility() {
   document.querySelectorAll(".cap-only").forEach((el) => {
     el.classList.toggle("hidden", !cap);
   });
+  syncCredentialGating();
   validateSalaryCap();
+}
+
+/**
+ * Grey/disable Actuary bonus fields that are already embedded in starting salary
+ * for the selected credential status. Matches backend bonus_flags().
+ */
+function syncCredentialGating() {
+  const status = form.elements.credential_status.value;
+  const active = {
+    exam: status !== "FSA-FCAS",
+    associate: status === "Not yet credentialed",
+    fellowship: status !== "FSA-FCAS",
+  };
+  document.querySelectorAll("[data-credential-gate]").forEach((wrap) => {
+    const gate = wrap.dataset.credentialGate;
+    const on = Boolean(active[gate]);
+    wrap.classList.toggle("field-disabled", !on);
+    wrap.querySelectorAll("input, select").forEach((el) => {
+      el.disabled = !on;
+    });
+  });
 }
 
 /** Cap must be >= starting salary (equal allowed). Below is invalid.
@@ -131,6 +169,25 @@ function validateSalaryCap() {
   return ok;
 }
 
+/**
+ * Fellowship timing vs Associate / exams-finish (Not yet credentialed only).
+ * Returns an error string, or null when valid / not applicable.
+ */
+function validateActuaryTiming() {
+  if (!form.elements.actuary_mode.checked) return null;
+  if (form.elements.credential_status.value !== "Not yet credentialed") return null;
+  const fellowship = numOrZero("years_until_fellowship");
+  const associate = numOrZero("years_until_associate");
+  const examsFinish = numOrZero("years_until_exams_finish");
+  if (fellowship < associate) {
+    return "Years until Fellowship must be greater than or equal to years until Associate";
+  }
+  if (fellowship < examsFinish) {
+    return "Years until Fellowship must be at least as long as years until exams finish.";
+  }
+  return null;
+}
+
 function readPayload() {
   return {
     starting_age: Number(form.elements.starting_age.value),
@@ -150,22 +207,32 @@ function readPayload() {
     target_filing_status: form.elements.filing_status_change_enabled.checked
       ? form.elements.target_filing_status.value
       : null,
-    years_until_filing_status_change: Number(
-      form.elements.years_until_filing_status_change.value
-    ),
+    years_until_filing_status_change: numOrZero("years_until_filing_status_change"),
     include_state_tax: form.elements.include_state_tax.checked,
     state_tax_rate: pctToDecimal("state_tax_rate_pct"),
     starting_salary: Number(form.elements.starting_salary.value),
     annual_merit_raise: pctToDecimal("annual_merit_raise_pct"),
     actuary_mode: form.elements.actuary_mode.checked,
     credential_status: form.elements.credential_status.value,
-    exams_remaining: Number(form.elements.exams_remaining.value),
-    salary_raise_per_exam: Number(form.elements.salary_raise_per_exam.value),
-    salary_raise_associate: Number(form.elements.salary_raise_associate.value),
-    years_until_associate: Number(form.elements.years_until_associate.value),
-    salary_raise_fellowship: Number(form.elements.salary_raise_fellowship.value),
-    years_until_fellowship: Number(form.elements.years_until_fellowship.value),
-    years_until_exams_finish: Number(form.elements.years_until_exams_finish.value),
+    exams_remaining: credentialGateActive("exam") ? numOrZero("exams_remaining") : 0,
+    salary_raise_per_exam: credentialGateActive("exam")
+      ? numOrZero("salary_raise_per_exam")
+      : 0,
+    salary_raise_associate: credentialGateActive("associate")
+      ? numOrZero("salary_raise_associate")
+      : 0,
+    years_until_associate: credentialGateActive("associate")
+      ? numOrZero("years_until_associate")
+      : 0,
+    salary_raise_fellowship: credentialGateActive("fellowship")
+      ? numOrZero("salary_raise_fellowship")
+      : 0,
+    years_until_fellowship: credentialGateActive("fellowship")
+      ? numOrZero("years_until_fellowship")
+      : 0,
+    years_until_exams_finish: credentialGateActive("exam")
+      ? numOrZero("years_until_exams_finish")
+      : 0,
     cap_salary_growth: form.elements.cap_salary_growth.checked,
     salary_cap: form.elements.cap_salary_growth.checked
       ? Number(form.elements.salary_cap.value)
@@ -1200,6 +1267,11 @@ async function recalculate() {
     setStatus("Error: salary cap must be ≥ starting salary", "err");
     return;
   }
+  const actuaryTimingErr = validateActuaryTiming();
+  if (actuaryTimingErr) {
+    setStatus(`Error: ${actuaryTimingErr}`, "err");
+    return;
+  }
   const constraintErr = formatConstraintErrors();
   if (constraintErr) {
     setStatus(`Error: ${constraintErr}`, "err");
@@ -1238,6 +1310,8 @@ async function recalculate() {
 }
 
 function scheduleRecalc() {
+  // Immediate UI sync (credential greying, visibility) — don't wait for debounce.
+  syncCredentialGating();
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(recalculate, 300);
 }
@@ -1303,36 +1377,49 @@ function whenLayoutReady() {
   return Promise.all([fontsReady, nextPaint]);
 }
 
-/** Align info-icon CSS tooltips so they stay inside the viewport. */
-function positionInfoTooltip(icon) {
-  icon.classList.remove("tooltip-align-start", "tooltip-align-end");
-  const rect = icon.getBoundingClientRect();
-  const vw = document.documentElement.clientWidth;
-  const pad = 12;
-  const tipMax = Math.min(
-    window.matchMedia("(max-width: 768px)").matches ? 200 : 260,
-    Math.max(80, vw - 40)
-  );
-  const centerX = rect.left + rect.width / 2;
-  if (centerX - tipMax / 2 < pad) {
-    icon.classList.add("tooltip-align-start");
-  } else if (centerX + tipMax / 2 > vw - pad) {
-    icon.classList.add("tooltip-align-end");
-  }
-}
-
+/**
+ * Fixed, viewport-clamped tooltips on document.body — cannot be clipped by
+ * sidebar overflow/containment, and cannot overhang the viewport.
+ */
 function bindInfoTooltips() {
+  const tip = $("#info-tooltip");
+  if (!tip) return;
+  const pad = 16;
+
+  function place(icon) {
+    const text = icon.getAttribute("data-tooltip") || "";
+    if (!text) return;
+    tip.textContent = text;
+    tip.hidden = false;
+    tip.classList.add("is-open");
+    // Measure after content is set so max-width wrapping is known.
+    const tipMax = Math.min(260, window.innerWidth - 32);
+    const r = icon.getBoundingClientRect();
+    let cx = r.left + r.width / 2;
+    const half = Math.min(tip.getBoundingClientRect().width || tipMax, tipMax) / 2;
+    cx = Math.min(Math.max(cx, pad + half), window.innerWidth - pad - half);
+    tip.style.left = `${cx}px`;
+    tip.style.top = `${r.top}px`;
+    icon.style.color = "var(--accent)";
+    icon.style.opacity = "1";
+  }
+
+  function hide(icon) {
+    tip.classList.remove("is-open");
+    tip.hidden = true;
+    tip.textContent = "";
+    if (icon) {
+      icon.style.color = "";
+      icon.style.opacity = "";
+    }
+  }
+
   document.querySelectorAll(".info-icon[data-tooltip]").forEach((icon) => {
     if (!icon.hasAttribute("tabindex")) icon.setAttribute("tabindex", "0");
-    const open = () => {
-      positionInfoTooltip(icon);
-      icon.classList.add("tooltip-open");
-    };
-    const close = () => icon.classList.remove("tooltip-open");
-    icon.addEventListener("pointerenter", open);
-    icon.addEventListener("pointerleave", close);
-    icon.addEventListener("focus", open);
-    icon.addEventListener("blur", close);
+    icon.addEventListener("pointerenter", () => place(icon));
+    icon.addEventListener("pointerleave", () => hide(icon));
+    icon.addEventListener("focus", () => place(icon));
+    icon.addEventListener("blur", () => hide(icon));
   });
 }
 

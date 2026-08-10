@@ -121,6 +121,14 @@ class CalculateRequest(BaseModel):
                 "Years until Fellowship must be greater than or equal to years until Associate "
                 "when credential status is Not yet credentialed"
             )
+        if (
+            self.actuary_mode
+            and self.credential_status == CredentialStatus.NOT_YET
+            and self.years_until_fellowship < self.years_until_exams_finish
+        ):
+            raise ValueError(
+                "Years until Fellowship must be at least as long as years until exams finish."
+            )
         if self.cap_salary_growth:
             if self.salary_cap is None:
                 raise ValueError(

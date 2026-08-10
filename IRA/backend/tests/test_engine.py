@@ -510,6 +510,54 @@ def test_fellowship_must_be_after_associate_when_not_credentialed():
         )
 
 
+def test_fellowship_must_be_at_or_after_exams_finish_when_not_credentialed():
+    with pytest.raises(
+        ValueError, match="at least as long as years until exams finish"
+    ):
+        _base_req(
+            actuary_mode=True,
+            credential_status=CredentialStatus.NOT_YET,
+            years_until_exams_finish=7,
+            years_until_associate=0,
+            years_until_fellowship=3,
+        )
+
+
+def test_fellowship_equal_exams_finish_ok():
+    req = _base_req(
+        actuary_mode=True,
+        credential_status=CredentialStatus.NOT_YET,
+        years_until_exams_finish=7,
+        years_until_associate=4,
+        years_until_fellowship=7,
+    )
+    assert req.years_until_fellowship == 7
+
+
+def test_fellowship_after_exams_finish_ok():
+    req = _base_req(
+        actuary_mode=True,
+        credential_status=CredentialStatus.NOT_YET,
+        years_until_exams_finish=7,
+        years_until_associate=4,
+        years_until_fellowship=9,
+    )
+    assert req.years_until_fellowship == 9
+
+
+def test_fellowship_before_exams_ok_when_already_associate():
+    # Exam-finish rule only applies to Not yet credentialed.
+    req = _base_req(
+        actuary_mode=True,
+        credential_status=CredentialStatus.ASSOCIATE,
+        years_until_exams_finish=7,
+        years_until_associate=0,
+        years_until_fellowship=3,
+        exams_remaining=0,
+    )
+    assert req.years_until_fellowship == 3
+
+
 def test_fellowship_before_associate_ok_when_already_associate():
     # Validation only applies to Not yet credentialed.
     req = _base_req(
