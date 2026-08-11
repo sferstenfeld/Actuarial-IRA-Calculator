@@ -1501,13 +1501,13 @@ function renderAnnuityTimeline() {
     return lim / ppy;
   }
 
-  const W = 820;
-  // Trim unused viewBox space below callout labels (was 260).
-  const H = 222;
+  const W = 860;
+  // Room for two-line callouts under the age row.
+  const H = 236;
   const gutter = 128;
   const axisL = gutter + 12;
-  // Right inset between the prior 36 and the tight 14 — left coords unchanged.
-  const padR = 24;
+  // Enough right inset so "(valuation date)" centered at x4 isn't clipped.
+  const padR = 52;
   const PAIR_GAP = 100;
 
   const x1 = axisL + 10;
@@ -1533,9 +1533,10 @@ function renderAnnuityTimeline() {
   const yAge = yLine + 36;
   const yArrowTop = yAge + 10;
   const yArrowBottom = yAge + 34;
-  const yCallout1 = yAge + 52;
-  const yCallout2 = yAge + 70;
+  const yCallout1 = yAge + 48;
+  const yCallout2 = yAge + 76;
   const timingLabel = beginning ? "Beginning" : "End";
+  const calloutLine = 12;
 
   // Multi-line row-label first-baseline so the block is centered on the target row.
   const labelLine = 12;
@@ -1593,44 +1594,44 @@ function renderAnnuityTimeline() {
     if (amt != null) dollarMarker(pt.x, amt);
   }
 
-  function callout(x, label, accent, yText, preferAnchor) {
-    let anchor = preferAnchor || "middle";
-    let tx = x;
-    if (!preferAnchor) {
-      if (x < axisL + 90) {
-        anchor = "start";
-        tx = Math.max(axisL, x - 2);
-      } else if (x > W - 120) {
-        anchor = "end";
-        tx = Math.min(W - 8, x + 2);
-      }
-    } else if (preferAnchor === "end") {
-      tx = Math.min(W - 8, x + 2);
-    } else if (preferAnchor === "start") {
-      tx = Math.max(axisL, x - 2);
-    }
+  function calloutArrow(x, accent) {
     parts.push(
       `<line x1="${x}" y1="${yArrowBottom}" x2="${x}" y2="${yArrowTop}" stroke="${accent}" stroke-width="1.5" />`
     );
     parts.push(
       `<polygon points="${x},${yArrowTop - 1} ${x - 5},${yArrowTop + 8} ${x + 5},${yArrowTop + 8}" fill="${accent}" />`
     );
+  }
+
+  /** Multi-line callout text centered under the arrow at x. */
+  function calloutLabel(x, lines, yText, fill) {
+    const spans = lines
+      .map(
+        (line, i) =>
+          `<tspan x="${x}" dy="${i === 0 ? 0 : calloutLine}">${line}</tspan>`
+      )
+      .join("");
     parts.push(
-      `<text x="${tx}" y="${yText}" text-anchor="${anchor}" fill="#f5f6f7" font-size="11" font-weight="600" font-family="Open Sans,Segoe UI,sans-serif">${label}</text>`
+      `<text x="${x}" y="${yText}" text-anchor="middle" fill="${fill}" font-size="11" font-weight="600" font-family="Open Sans,Segoe UI,sans-serif">${spans}</text>`
     );
   }
 
-  callout(xFirstArrow, "First contribution", "#3b82f6", yCallout1);
+  function callout(x, lines, accent, yText) {
+    calloutArrow(x, accent);
+    calloutLabel(x, lines, yText, "#f5f6f7");
+  }
 
-  // Always stagger Last vs Retirement vertically; each text sits under its own arrow x.
+  callout(xFirstArrow, ["First", "Contribution"], "#3b82f6", yCallout1);
+
   if (xLastArrow === x4) {
-    callout(x4, "Last contribution", "#93c5fd", yCallout1, "end");
-    parts.push(
-      `<text x="${Math.min(W - 8, x4 + 2)}" y="${yCallout2}" text-anchor="end" fill="#9ca3af" font-size="11" font-weight="600" font-family="Open Sans,Segoe UI,sans-serif">Retirement (valuation date)</text>`
-    );
+    // End timing: same tick — stagger vertically so labels don't overlap.
+    calloutArrow(x4, "#93c5fd");
+    calloutLabel(x4, ["Last", "Contribution"], yCallout1, "#f5f6f7");
+    calloutLabel(x4, ["Retirement", "(valuation date)"], yCallout2, "#9ca3af");
   } else {
-    callout(xLastArrow, "Last contribution", "#93c5fd", yCallout1, "middle");
-    callout(x4, "Retirement (valuation date)", "#e5e7eb", yCallout2, "end");
+    // Beginning timing: distinct ticks — same vertical height as First/Last.
+    callout(xLastArrow, ["Last", "Contribution"], "#93c5fd", yCallout1);
+    callout(x4, ["Retirement", "(valuation date)"], "#e5e7eb", yCallout1);
   }
 
   parts.push("</svg>");
