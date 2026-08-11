@@ -60,23 +60,13 @@ function credentialGateActive(gate) {
  * Assign input.value only when it actually changes. Blind reassignment
  * resets caret/selection even when the displayed text is identical — which
  * races with click/select when a debounced recalc fires.
+ * Never rewrite the focused field while the user is typing.
  */
 function updateInputIfChanged(inputElement, newValue) {
+  if (document.activeElement === inputElement) return;
   const next = String(newValue);
   if (inputElement.value === next) return;
-  const selStart = inputElement.selectionStart;
-  const selEnd = inputElement.selectionEnd;
   inputElement.value = next;
-  if (document.activeElement === inputElement) {
-    try {
-      // type=number may not support selection APIs in every browser
-      if (selStart != null && selEnd != null) {
-        inputElement.setSelectionRange(selStart, selEnd);
-      }
-    } catch (_) {
-      /* ignore */
-    }
-  }
 }
 
 /** Skip attribute writes on the focused control; otherwise only if changed. */
@@ -92,6 +82,52 @@ function updateClassFlag(el, className, shouldHave) {
   if (document.activeElement === el) return;
   if (el.classList.contains(className) === shouldHave) return;
   el.classList.toggle(className, shouldHave);
+}
+
+/**
+ * Chromium `type=number` often reports selectionStart/End as null and, after a
+ * select-all → replace keystroke, leaves the caret at index 0 — so the next
+ * digit is inserted at the front ("10" → "01"). Force the caret to the end
+ * after each user edit while the field is focused.
+ */
+function restoreNumberCaretToEnd(inp) {
+  if (!(inp instanceof HTMLInputElement)) return;
+  if (inp.type !== "number") return;
+  if (document.activeElement !== inp) return;
+  try {
+    const n = inp.value.length;
+    inp.setSelectionRange(n, n);
+  } catch (_) {
+    /* some engines disallow selection on type=number */
+  }
+}
+
+function bindNumberInputCaretGuards() {
+  form.querySelectorAll('input[type="number"]').forEach((inp) => {
+    inp.addEventListener("input", () => {
+      // After the browser commits the character; rAF covers layout/recalc races.
+      queueMicrotask(() => restoreNumberCaretToEnd(inp));
+      requestAnimationFrame(() => restoreNumberCaretToEnd(inp));
+    });
+    // If Chromium left the caret at 0 after select-all → replace, move it to
+    // the end before the next digit is inserted (avoids "10" → "01").
+    inp.addEventListener("keydown", (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key.length !== 1) return;
+      try {
+        if (
+          inp.selectionStart === 0 &&
+          inp.selectionEnd === 0 &&
+          inp.value.length > 0
+        ) {
+          const n = inp.value.length;
+          inp.setSelectionRange(n, n);
+        }
+      } catch (_) {
+        /* ignore */
+      }
+    });
+  });
 }
 
 function toggleVisibility() {
@@ -133,9 +169,15 @@ function syncCredentialGating() {
   document.querySelectorAll("[data-credential-gate]").forEach((wrap) => {
     const gate = wrap.dataset.credentialGate;
     const on = Boolean(active[gate]);
-    wrap.classList.toggle("field-disabled", !on);
+    const shouldDisableWrap = !on;
+    if (wrap.classList.contains("field-disabled") !== shouldDisableWrap) {
+      wrap.classList.toggle("field-disabled", shouldDisableWrap);
+    }
     wrap.querySelectorAll("input, select").forEach((el) => {
-      el.disabled = !on;
+      // Never toggle disabled on the focused control mid-keystroke.
+      if (document.activeElement === el) return;
+      const nextDisabled = !on;
+      if (el.disabled !== nextDisabled) el.disabled = nextDisabled;
     });
   });
 }
@@ -153,9 +195,7 @@ function validateSalaryCap() {
   const start = Number(form.elements.starting_salary.value);
 
   // Absolute non-negative floor only; keep in sync with markup min="0".
-  if (capInput.getAttribute("min") !== "0") {
-    capInput.setAttribute("min", "0");
-  }
+  updateAttrIfChanged(capInput, "min", "0");
 
   if (!enabled) {
     updateClassFlag(capInput, "input-invalid", false);
@@ -1262,19 +1302,23 @@ function renderAssumptions(data) {
 }
 
 async function recalculate() {
+  const focusedBefore = document.activeElement;
   toggleVisibility();
   if (!validateSalaryCap()) {
     setStatus("Error: salary cap must be ≥ starting salary", "err");
+    restoreNumberCaretToEnd(focusedBefore);
     return;
   }
   const actuaryTimingErr = validateActuaryTiming();
   if (actuaryTimingErr) {
     setStatus(`Error: ${actuaryTimingErr}`, "err");
+    restoreNumberCaretToEnd(focusedBefore);
     return;
   }
   const constraintErr = formatConstraintErrors();
   if (constraintErr) {
     setStatus(`Error: ${constraintErr}`, "err");
+    restoreNumberCaretToEnd(focusedBefore);
     return;
   }
   setStatus("Calculating…");
@@ -1307,13 +1351,17 @@ async function recalculate() {
     );
   } catch (e) {
     setStatus(`Error: ${e.message}`, "err");
+  } finally {
+    // Chart/DOM updates can nudge Chromium number-input carets back to 0.
+    restoreNumberCaretToEnd(document.activeElement);
   }
 }
 
 function scheduleRecalc() {
-  // Immediate UI sync (credential greying, visibility) — don't wait for debounce.
+  // Immediate UI sync (credential greying) — don't wait for debounce.
+  // Avoid rewriting DOM on the keystroke path beyond what's necessary;
+  // chart/timeline remounts stay on the debounced recalculate().
   syncCredentialGating();
-  renderAnnuityTimeline();
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(recalculate, 300);
 }
@@ -1721,6 +1769,7 @@ async function boot() {
   });
   syncBalanceScaleToggle();
 
+  bindNumberInputCaretGuards();
   toggleVisibility();
   renderAnnuityTimeline();
   // Wait for fonts + a settled layout/paint before the first chart create.
