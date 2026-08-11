@@ -243,6 +243,15 @@
 
         <details class="extra-detail" open data-chart-section="primary">
           <summary>IRA Time Value of Money Charts</summary>
+          <div class="chart-block annuity-timeline-block">
+            <h2>Contribution timing timeline</h2>
+            <p class="hint">
+              Visualizes when contributions start and end under your current Contribution timing,
+              delay, and frequency. Anchors mark starting age and retirement (valuation date);
+              contribution markers float to their true ages (which may be fractional).
+            </p>
+            <div id="annuityTimeline" class="annuity-timeline" aria-live="polite"></div>
+          </div>
           <div class="chart-block chart-balance">
             <div class="chart-heading">
               <h2>Balance over time</h2>
@@ -269,7 +278,7 @@
 
           <div class="chart-block">
             <h2>Growth Multiple by Contribution Vintage (by Age)</h2>
-            <p class="hint">How many times each year’s contributions grow by retirement — accounts for return, frequency, and Beginning vs End timing (annuity due vs immediate). Age axis runs from starting age through retirement age inclusive.</p>
+            <p class="hint">How many times each year’s contributions grow by retirement — accounts for return, frequency, and Beginning vs End timing (annuity due vs immediate). Age axis runs from starting age through the year before retirement.</p>
             <div class="chart-frame">
               <canvas id="growthMultipleChart"></canvas>
             </div>

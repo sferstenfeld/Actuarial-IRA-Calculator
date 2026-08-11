@@ -1293,6 +1293,7 @@ async function recalculate() {
     latestData = data;
     renderSummary(data);
     renderCharts(data);
+    renderAnnuityTimeline();
     renderMilestones(data);
     renderScenarios(data);
     renderTaxSummaryAndAllocation(data);
@@ -1312,8 +1313,280 @@ async function recalculate() {
 function scheduleRecalc() {
   // Immediate UI sync (credential greying, visibility) — don't wait for debounce.
   syncCredentialGating();
+  renderAnnuityTimeline();
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(recalculate, 300);
+}
+
+function periodsPerYearFromForm() {
+  const freq = form.elements.contribution_frequency.value;
+  const map = {
+    Annual: 1,
+    Semiannual: 2,
+    Quarterly: 4,
+    Monthly: 12,
+    Weekly: 52,
+  };
+  if (freq === "Advanced") {
+    const interval = Number(form.elements.trading_day_interval.value);
+    if (!Number.isFinite(interval) || interval <= 0) return 1;
+    return Math.max(1, Math.floor(252 / interval));
+  }
+  return map[freq] || 1;
+}
+
+const _SUPER = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+const _SUB = "₀₁₂₃₄₅₆₇₈₉";
+function _toScript(n, alphabet) {
+  return String(Math.abs(Math.trunc(n)))
+    .split("")
+    .map((d) => alphabet[Number(d)] || d)
+    .join("");
+}
+
+/** Mixed-number age label pieces for SVG (plain int when whole). */
+function ageLabelParts(age, ppy) {
+  const whole = Math.floor(age + 1e-10);
+  const frac = age - whole;
+  if (frac < 1e-8 || ppy <= 1) return { whole, fracText: null };
+  let num = Math.round(frac * ppy);
+  let den = ppy;
+  if (num <= 0) return { whole, fracText: null };
+  if (num >= den) return { whole: whole + 1, fracText: null };
+  // Reduce by gcd for nicer fractions (e.g. 6/12 → 1/2).
+  let a = num;
+  let b = den;
+  while (b) {
+    const t = a % b;
+    a = b;
+    b = t;
+  }
+  num /= a;
+  den /= a;
+  return { whole, fracText: `${_toScript(num, _SUPER)}⁄${_toScript(den, _SUB)}` };
+}
+
+function svgAgeText(x, y, age, ppy, opts = {}) {
+  const fill = opts.fill || "#e5e7eb";
+  const size = opts.size || 13;
+  const weight = opts.weight || 600;
+  const parts = ageLabelParts(age, ppy);
+  if (!parts.fracText) {
+    return `<text x="${x}" y="${y}" text-anchor="middle" fill="${fill}" font-size="${size}" font-weight="${weight}" font-family="Open Sans,Segoe UI,sans-serif">${parts.whole}</text>`;
+  }
+  const fracSize = Math.max(9, Math.round(size * 0.75));
+  return (
+    `<text x="${x}" y="${y}" text-anchor="middle" fill="${fill}" font-size="${size}" font-weight="${weight}" font-family="Open Sans,Segoe UI,sans-serif">` +
+    `<tspan>${parts.whole}</tspan>` +
+    `<tspan dx="3" dy="${Math.round(-size * 0.28)}" font-size="${fracSize}" font-weight="600">${parts.fracText}</tspan>` +
+    `</text>`
+  );
+}
+
+/**
+ * Contribution timing timeline — illustrative SVG (not to scale).
+ * Always shows 4 points; First/Last arrows switch with Contribution timing.
+ * Start-pair ages include contribution delay; dollars are periodic (limit / ppy).
+ */
+function renderAnnuityTimeline() {
+  const root = $("#annuityTimeline");
+  if (!root) return;
+
+  const start = Number(form.elements.starting_age.value);
+  const retire = Number(form.elements.retirement_age.value);
+  const delayRaw = form.elements.contribution_delay_years.value;
+  const delay = delayRaw === "" || delayRaw == null ? 0 : Number(delayRaw);
+  const beginning = form.elements.contribution_timing.value === "Beginning";
+  const ppy = periodsPerYearFromForm();
+  const periodLen = 1 / ppy;
+
+  if (!Number.isFinite(start) || !Number.isFinite(retire) || retire <= start) {
+    root.innerHTML =
+      '<p class="hint">Enter a retirement age greater than starting age to see the timeline.</p>';
+    return;
+  }
+  if (!Number.isFinite(delay) || delay < 0) {
+    root.innerHTML = '<p class="hint">Enter a valid contribution delay (years).</p>';
+    return;
+  }
+
+  // Four always-visible points. Start pair shifts with delay.
+  const p1 = start + delay;
+  const p2 = start + delay + periodLen;
+  const p3 = retire - periodLen;
+  const p4 = retire;
+
+  if (p2 > p3 + 1e-9) {
+    root.innerHTML =
+      '<p class="hint">Delay and frequency leave no contribution window before retirement.</p>';
+    return;
+  }
+
+  const firstContribAge = start + delay + (beginning ? 0 : periodLen);
+  const lastContribAge = retire - (beginning ? periodLen : 0);
+
+  const limitByAge = new Map();
+  let lastYearLimit = null;
+  let lastYearAge = null;
+  if (latestData && Array.isArray(latestData.years)) {
+    for (const y of latestData.years) {
+      limitByAge.set(y.age, y.ira_limit);
+      lastYearLimit = y.ira_limit;
+      lastYearAge = y.age;
+    }
+  }
+
+  function contributesAt(age) {
+    if (firstContribAge > lastContribAge + 1e-9) return false;
+    return age + 1e-9 >= firstContribAge && age - 1e-9 <= lastContribAge;
+  }
+
+  /** Periodic amount = that year's indexed IRA limit / periods_per_year. */
+  function amountAt(age) {
+    if (!contributesAt(age)) return null;
+    const key = Math.floor(age + 1e-9);
+    let lim = limitByAge.has(key) ? limitByAge.get(key) : null;
+    if ((lim == null || Number.isNaN(lim)) && lastYearLimit != null && lastYearAge != null && key >= lastYearAge) {
+      lim = lastYearLimit;
+    }
+    if (lim == null || !(lim > 0) || !(ppy > 0)) return null;
+    return lim / ppy;
+  }
+
+  const W = 820;
+  // Trim unused viewBox space below callout labels (was 260).
+  const H = 222;
+  const gutter = 128;
+  const axisL = gutter + 12;
+  // Right inset between the prior 36 and the tight 14 — left coords unchanged.
+  const padR = 24;
+  const PAIR_GAP = 100;
+
+  const x1 = axisL + 10;
+  const x2 = x1 + PAIR_GAP;
+  const x4 = W - padR - 10;
+  const x3 = x4 - PAIR_GAP;
+  const midX = (x2 + x3) / 2;
+
+  const points = [
+    { age: p1, x: x1 },
+    { age: p2, x: x2 },
+    { age: p3, x: x3 },
+    { age: p4, x: x4 },
+  ];
+
+  const xFirstArrow = beginning ? x1 : x2;
+  const xLastArrow = beginning ? x3 : x4;
+
+  const boxH = 24;
+  const boxGap = 14;
+  const yLine = 100;
+  const yDollarCenter = yLine - boxGap - boxH / 2;
+  const yAge = yLine + 36;
+  const yArrowTop = yAge + 10;
+  const yArrowBottom = yAge + 34;
+  const yCallout1 = yAge + 52;
+  const yCallout2 = yAge + 70;
+  const timingLabel = beginning ? "Beginning" : "End";
+
+  // Multi-line row-label first-baseline so the block is centered on the target row.
+  const labelLine = 12;
+  const yPeriodicLabel = yDollarCenter - labelLine; // 3 lines → centers on middle line
+  const yAgeLabel = yAge - labelLine / 2; // 2 lines → centers between them, on age baseline
+
+  const parts = [];
+  parts.push(
+    `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Contribution timeline from age ${start} to ${retire}, ${timingLabel} timing, delay ${delay}">`
+  );
+
+  // Left-side row labels — vertically centered with each row.
+  parts.push(
+    `<text x="${gutter - 10}" y="${yPeriodicLabel}" text-anchor="end" fill="#9ca3af" font-size="10" font-weight="600" font-family="Open Sans,Segoe UI,sans-serif">` +
+      `<tspan x="${gutter - 10}" dy="0">Periodic</tspan>` +
+      `<tspan x="${gutter - 10}" dy="${labelLine}">contribution</tspan>` +
+      `<tspan x="${gutter - 10}" dy="${labelLine}">amount</tspan>` +
+    `</text>`
+  );
+  parts.push(
+    `<text x="${gutter - 10}" y="${yAgeLabel}" text-anchor="end" fill="#9ca3af" font-size="10" font-weight="600" font-family="Open Sans,Segoe UI,sans-serif">` +
+      `<tspan x="${gutter - 10}" dy="0">Age</tspan>` +
+      `<tspan x="${gutter - 10}" dy="${labelLine}">(in years)</tspan>` +
+    `</text>`
+  );
+
+  parts.push(
+    `<line x1="${axisL}" y1="${yLine}" x2="${W - padR}" y2="${yLine}" stroke="#e5e7eb" stroke-width="2" />`
+  );
+
+  parts.push(
+    `<text x="${midX}" y="${yLine - 16}" text-anchor="middle" fill="#3b82f6" font-size="18" font-weight="700" font-family="Open Sans,Segoe UI,sans-serif">…</text>`
+  );
+  parts.push(
+    `<text x="${midX}" y="${yAge}" text-anchor="middle" fill="#9ca3af" font-size="14" font-family="Open Sans,Segoe UI,sans-serif">…</text>`
+  );
+
+  function dollarMarker(x, amount) {
+    const label = money(amount, 0);
+    const boxW = Math.max(52, 8 + label.length * 7.2);
+    parts.push(
+      `<rect x="${x - boxW / 2}" y="${yLine - boxH - boxGap}" width="${boxW}" height="${boxH}" rx="6" fill="#3b82f6" />`
+    );
+    parts.push(
+      `<text x="${x}" y="${yDollarCenter}" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-size="11" font-weight="700" font-family="Open Sans,Segoe UI,sans-serif">${label}</text>`
+    );
+  }
+
+  for (const pt of points) {
+    parts.push(
+      `<line x1="${pt.x}" y1="${yLine - 7}" x2="${pt.x}" y2="${yLine + 7}" stroke="#9ca3af" stroke-width="1.5" />`
+    );
+    parts.push(svgAgeText(pt.x, yAge, pt.age, ppy, { fill: "#e5e7eb" }));
+    const amt = amountAt(pt.age);
+    if (amt != null) dollarMarker(pt.x, amt);
+  }
+
+  function callout(x, label, accent, yText, preferAnchor) {
+    let anchor = preferAnchor || "middle";
+    let tx = x;
+    if (!preferAnchor) {
+      if (x < axisL + 90) {
+        anchor = "start";
+        tx = Math.max(axisL, x - 2);
+      } else if (x > W - 120) {
+        anchor = "end";
+        tx = Math.min(W - 8, x + 2);
+      }
+    } else if (preferAnchor === "end") {
+      tx = Math.min(W - 8, x + 2);
+    } else if (preferAnchor === "start") {
+      tx = Math.max(axisL, x - 2);
+    }
+    parts.push(
+      `<line x1="${x}" y1="${yArrowBottom}" x2="${x}" y2="${yArrowTop}" stroke="${accent}" stroke-width="1.5" />`
+    );
+    parts.push(
+      `<polygon points="${x},${yArrowTop - 1} ${x - 5},${yArrowTop + 8} ${x + 5},${yArrowTop + 8}" fill="${accent}" />`
+    );
+    parts.push(
+      `<text x="${tx}" y="${yText}" text-anchor="${anchor}" fill="#f5f6f7" font-size="11" font-weight="600" font-family="Open Sans,Segoe UI,sans-serif">${label}</text>`
+    );
+  }
+
+  callout(xFirstArrow, "First contribution", "#3b82f6", yCallout1);
+
+  // Always stagger Last vs Retirement vertically; each text sits under its own arrow x.
+  if (xLastArrow === x4) {
+    callout(x4, "Last contribution", "#93c5fd", yCallout1, "end");
+    parts.push(
+      `<text x="${Math.min(W - 8, x4 + 2)}" y="${yCallout2}" text-anchor="end" fill="#9ca3af" font-size="11" font-weight="600" font-family="Open Sans,Segoe UI,sans-serif">Retirement (valuation date)</text>`
+    );
+  } else {
+    callout(xLastArrow, "Last contribution", "#93c5fd", yCallout1, "middle");
+    callout(x4, "Retirement (valuation date)", "#e5e7eb", yCallout2, "end");
+  }
+
+  parts.push("</svg>");
+  root.innerHTML = parts.join("");
 }
 
 /** Remount charts after a previously-hidden layout becomes visible.
@@ -1447,7 +1720,9 @@ async function boot() {
     });
   });
   syncBalanceScaleToggle();
+
   toggleVisibility();
+  renderAnnuityTimeline();
   // Wait for fonts + a settled layout/paint before the first chart create.
   await whenLayoutReady();
   await recalculate();

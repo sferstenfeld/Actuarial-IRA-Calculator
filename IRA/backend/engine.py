@@ -55,19 +55,17 @@ def _fmt_dollars(amount: float) -> str:
 
 
 def projection_years(req: CalculateRequest) -> int:
-    """Inclusive horizon: contribute/grow for ages start..retirement inclusive.
+    """Exclusive horizon: N = retirement_age − starting_age.
 
-    Excel uses retirement_age - starting_age + 1 year-rows (e.g. 22→65 → 44 years).
-    Exclusive (end - start) understated both growth multiples and total contributions.
+    Annuity-due contributions at times 0..N−1 (ages start .. retire−1), valued at time N.
     """
-    return req.retirement_age - req.starting_age + 1
+    return req.retirement_age - req.starting_age
 
 
 def inflation_years_to_retirement(req: CalculateRequest) -> int:
     """Years of inflation from today to retirement for the *final* real KPI.
 
-    Excel final real for 22→65 is nom/(1+π)^43 even though contribution years
-    are inclusive (44). Kept exclusive on purpose for that regression fixture.
+    Matches the exclusive investment horizon (retirement − starting).
     """
     return req.retirement_age - req.starting_age
 
@@ -77,6 +75,8 @@ def inflation_years_elapsed(year_index: int) -> int:
 
     Beginning-of-period timing: a full year of compounding (and inflation) has
     elapsed by the time the year-0 ending balance is measured, so n = year_index + 1.
+    After N exclusive years (indices 0..N−1), the final point has n = N years of
+    inflation — matching ``inflation_years_to_retirement``.
     """
     if year_index < 0:
         raise ValueError("year_index must be non-negative")
@@ -139,12 +139,14 @@ def growth_multiple_for_period(
     rate: float,
     timing: ContributionTiming,
 ) -> float:
-    """Periods of growth until horizon end.
+    """Periods of growth until valuation at the horizon end.
 
-    Beginning-of-period contributions earn one additional period vs End
-    (annuity-due vs immediate): remaining = N - index (Beginning) vs N - index - 1 (End).
-    With an inclusive horizon (N = retirement - start + 1), Annual/Beginning first
-    vintage is (1+r)^N and the final vintage is (1+r)^1 — matching Excel.
+    With exclusive horizon N = retirement − start (total_periods = N × ppy):
+    - Beginning (annuity-due): remaining = total − index → first vintage (1+r)^N
+    - End (annuity-immediate): remaining = total − index − 1 → first vintage (1+r)^(N−1)
+
+    Periods remaining for a Beginning contribution at age a is exactly
+    (retirement_age − a) — no extra +1.
     """
     if total_periods < 0 or period_index < 0:
         raise ValueError("period indices must be non-negative")
@@ -591,7 +593,7 @@ def calculate(req: CalculateRequest) -> CalculateResponse:
 
     for t in range(years):
         # Age during this contribution year (limits, catch-up, charts, early-stop).
-        # Inclusive horizon → ages run starting_age .. retirement_age.
+        # Exclusive horizon → ages run starting_age .. retirement_age - 1.
         age = req.starting_age + t
         tax = compute_year_tax(
             salary=salaries[t],

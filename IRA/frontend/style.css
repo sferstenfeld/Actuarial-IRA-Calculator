@@ -561,6 +561,38 @@ select {
   box-shadow: var(--shadow);
 }
 
+/* Snug bottom only — keep top/side padding matching other cards. */
+.annuity-timeline-block {
+  padding-bottom: 0.65rem;
+}
+
+.annuity-timeline-block h2 {
+  margin-bottom: 0.35rem;
+}
+
+.annuity-timeline {
+  margin-top: 0.35rem;
+  /* Left-aligned; moderately wide (between the prior 82% and 96%). */
+  width: 90%;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.annuity-timeline svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 820 / 222;
+}
+
+.annuity-timeline .hint {
+  margin: 0.25rem 0 0;
+}
+
 /* Fixed-height frames: Chart.js responsive sizing uses the parent, not canvas attrs. */
 .chart-frame {
   position: relative;

@@ -211,8 +211,8 @@ def test_oasdi_wage_base_indexes_with_inflation():
 def test_calculate_endpoint_shape():
     req = _base_req()
     resp = calculate(req)
-    assert resp.years_to_retirement == 6
-    assert len(resp.years) == 6
+    assert resp.years_to_retirement == 5  # exclusive: 35 − 30
+    assert len(resp.years) == 5
     assert resp.final_balance_periodic > req.current_ira_balance
     assert resp.total_contributions > 0
     assert resp.assumptions_notes
@@ -810,7 +810,7 @@ def test_seed_vintage_not_lost():
     resp = calculate(
         _base_req(
             current_ira_balance=10_000.0,
-            contribution_delay_years=99,  # no contributions in inclusive horizon
+            contribution_delay_years=99,  # no contributions in exclusive horizon
             contribution_frequency=ContributionFrequency.ANNUAL,
             contribution_timing=ContributionTiming.BEGINNING,
             annual_return=0.10,
@@ -821,8 +821,8 @@ def test_seed_vintage_not_lost():
             ira_catchup_limit_0=0.0,
         )
     )
-    assert resp.seed_growth_multiple == pytest.approx(1.10**6, abs=1e-12)
-    assert resp.seed_terminal_value == pytest.approx(10_000.0 * 1.10**6, abs=1e-6)
+    assert resp.seed_growth_multiple == pytest.approx(1.10**5, abs=1e-12)
+    assert resp.seed_terminal_value == pytest.approx(10_000.0 * 1.10**5, abs=1e-6)
     assert resp.sum_contribution_terminal_values == pytest.approx(0.0, abs=1e-9)
     assert resp.final_balance_periodic == pytest.approx(resp.seed_terminal_value, abs=1e-6)
 
@@ -869,13 +869,42 @@ def test_advanced_frequency_vintage_cross_check():
 # ---- Phase 5–8: milestones, scenarios, QA edges -----------------------------
 
 
-def test_year_ages_span_to_retirement_age():
-    """Inclusive horizon: ages run starting_age .. retirement_age inclusive."""
+def test_year_ages_span_to_year_before_retirement():
+    """Exclusive horizon: ages run starting_age .. retirement_age - 1."""
     resp = calculate(_base_req(starting_age=28, retirement_age=65))
     ages = [y.age for y in resp.years]
     assert ages[0] == 28
-    assert ages[-1] == 65
-    assert len(ages) == 65 - 28 + 1
+    assert ages[-1] == 64
+    assert len(ages) == 65 - 28
+
+
+def test_beginning_first_vintage_is_exactly_n_periods():
+    """Manual check: 20→60, 10%, Beginning → first GM = 1.1^40, TV = 7500×that."""
+    resp = calculate(
+        _base_req(
+            starting_age=20,
+            retirement_age=60,
+            current_ira_balance=0.0,
+            annual_return=0.10,
+            annual_inflation=0.0,
+            contribution_frequency=ContributionFrequency.ANNUAL,
+            contribution_timing=ContributionTiming.BEGINNING,
+            contribution_delay_years=0,
+            starting_salary=200_000.0,
+            annual_merit_raise=0.0,
+            ira_base_limit_0=7_500.0,
+            ira_catchup_limit_0=0.0,
+        )
+    )
+    assert resp.years_to_retirement == 40
+    assert resp.years[0].age == 20
+    assert resp.years[-1].age == 59
+    assert resp.years[0].contribution == pytest.approx(7_500.0)
+    assert resp.years[0].growth_multiple == pytest.approx(1.1**40, rel=1e-12)
+    assert resp.years[0].terminal_value == pytest.approx(7_500.0 * (1.1**40), abs=0.01)
+    assert resp.years[0].terminal_value == pytest.approx(339_444.42, abs=0.05)
+    assert resp.years[-1].growth_multiple == pytest.approx(1.1, rel=1e-12)
+    assert resp.vintage_cross_check_ok is True
 
 
 def test_contribution_capped_at_earned_income():
@@ -939,10 +968,11 @@ def test_realistic_scenario_earned_income_cap_does_not_bind():
 
 
 def test_excel_regression_age22_to_65_annual_beginning():
-    """Standing regression vs Excel source model (handoff §9).
+    """Former Excel fixture used an inclusive (+1) horizon; default model is exclusive.
 
     Inputs: age 22→65, $0 seed, 7%/3%, Annual/Beginning, 0 delay,
     $85k salary, 3% merit, Single, no state tax, Actuary Mode off.
+    First vintage must be 1.07^43 (not ^44) — N = 65 − 22 with no Beginning +1.
     """
     resp = calculate(
         _base_req(
@@ -961,17 +991,29 @@ def test_excel_regression_age22_to_65_annual_beginning():
             actuary_mode=False,
         )
     )
-    assert resp.years_to_retirement == 44
+    assert resp.years_to_retirement == 43
     assert resp.years[0].age == 22
-    assert resp.years[-1].age == 65
-    assert resp.total_contributions == pytest.approx(706_800.0, abs=0.5)
-    assert resp.years[0].growth_multiple == pytest.approx(1.07**44, rel=1e-9)
+    assert resp.years[-1].age == 64
+    assert resp.years[0].growth_multiple == pytest.approx(1.07**43, rel=1e-9)
     assert resp.years[-1].growth_multiple == pytest.approx(1.07, rel=1e-9)
-    assert resp.final_balance_periodic == pytest.approx(3_223_138.0, abs=1.0)
-    assert resp.final_balance_real_periodic == pytest.approx(904_229.0, abs=1.0)
-    multiplier = resp.final_balance_periodic / resp.total_contributions
-    assert multiplier == pytest.approx(4.56, abs=0.01)
+    assert resp.vintage_cross_check_ok is True
+    # Exclusive horizon: one fewer contribution year vs the old inclusive Excel workbook.
+    assert resp.total_contributions == pytest.approx(676_400.0, abs=0.5)
     assert resp.years_contribution_capped_by_income == 0
+
+
+def test_early_stop_at_last_contrib_age_zeros_final_year_only():
+    """Stop age == last contribution age (retire−1) zeros the final exclusive year."""
+    base = calculate(_base_req(starting_age=30, retirement_age=50))
+    stopped = calculate(
+        _base_req(starting_age=30, retirement_age=50, early_stop_age=49)
+    )
+    assert stopped.years[-1].contribution == 0.0
+    assert base.years[-1].contribution > 0.0
+    assert stopped.total_contributions == pytest.approx(
+        base.total_contributions - base.years[-1].contribution, abs=0.5
+    )
+    assert stopped.final_balance_periodic < base.final_balance_periodic
 
 
 def test_balance_milestones_are_percent_of_final():
@@ -1223,20 +1265,6 @@ def test_contribution_gap_reduces_balance():
     # Zero contributions inside gap window
     for row in gapped.years[5:8]:
         assert row.contribution == 0.0
-
-
-def test_early_stop_at_retirement_zeros_final_year_only():
-    """Stop age == retirement age zeros the inclusive final year (handoff: from that age onward)."""
-    base = calculate(_base_req(starting_age=30, retirement_age=50))
-    stopped = calculate(
-        _base_req(starting_age=30, retirement_age=50, early_stop_age=50)
-    )
-    assert stopped.years[-1].contribution == 0.0
-    assert base.years[-1].contribution > 0.0
-    assert stopped.total_contributions == pytest.approx(
-        base.total_contributions - base.years[-1].contribution, abs=0.5
-    )
-    assert stopped.final_balance_periodic < base.final_balance_periodic
 
 
 def test_early_stop_reduces_contributions():
