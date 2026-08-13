@@ -12,7 +12,7 @@ class FilingStatus(str, Enum):
     """Canonical filing-status labels — use these keys everywhere (UI + tax tables)."""
 
     SINGLE = "Single"
-    JOINT = "Joint"
+    JOINT = "Married Filing Jointly"
     MFS = "Married Filing Separately"
     HOH = "Head of Household"
 

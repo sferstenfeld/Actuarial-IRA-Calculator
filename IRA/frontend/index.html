@@ -108,7 +108,7 @@
             <label>Filing status
               <select name="filing_status">
                 <option selected>Single</option>
-                <option>Joint</option>
+                <option>Married Filing Jointly</option>
                 <option>Married Filing Separately</option>
                 <option>Head of Household</option>
               </select>
@@ -120,7 +120,7 @@
             <label class="status-change-only hidden">Target filing status
               <select name="target_filing_status">
                 <option>Single</option>
-                <option selected>Joint</option>
+                <option selected>Married Filing Jointly</option>
                 <option>Married Filing Separately</option>
                 <option>Head of Household</option>
               </select>
@@ -270,15 +270,15 @@
 
           <div class="chart-block">
             <h2>Purchasing Power Retained</h2>
-            <p class="hint">Real balance as a share of nominal — how much of today’s purchasing power remains after inflation.</p>
+            <p class="hint">Real balance as a share of nominal is how much of today’s purchasing power remains after inflation.</p>
             <div class="chart-frame">
               <canvas id="purchasingPowerChart"></canvas>
             </div>
           </div>
 
           <div class="chart-block">
-            <h2>Growth Multiple by Contribution Vintage (by Age)</h2>
-            <p class="hint">How many times each year’s contributions grow by retirement — accounts for return, frequency, and Beginning vs End timing (annuity due vs immediate). Age axis runs from starting age through the year before retirement.</p>
+            <h2>Growth Multiple by Contribution Age</h2>
+            <p class="hint">How many times each year’s contributions grow by retirement. This accounts for return, frequency, and Beginning vs End timing (annuity due vs immediate). Age axis runs from starting age through the year before retirement.</p>
             <div class="chart-frame">
               <canvas id="growthMultipleChart"></canvas>
             </div>
@@ -325,7 +325,7 @@
           </div>
 
           <div class="chart-block">
-            <h2>Annual tax detail</h2>
+            <h2>Annual tax details</h2>
             <div class="chart-frame">
               <canvas id="taxChart"></canvas>
             </div>

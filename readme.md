@@ -46,6 +46,10 @@ Try the app here: [https://actuarial-ira-calculator.onrender.com/](https://actua
 
 ## Screenshots
 
+### Contribution Timing Timeline
+
+![Contribution Timing Timeline](Screenshots/timeline-showoff.png)
+
 ### Calculator Overview
 
 ![Calculator Overview](Screenshots/calculator-overview.png)
@@ -56,7 +60,83 @@ Try the app here: [https://actuarial-ira-calculator.onrender.com/](https://actua
 
 ## Features
 
+Every chart, table, milestone, and diagram in the app is live. Nothing is a static image or a pre-rendered example. Changing any assumption in the sidebar recalculates the entire model and redraws every visual against the new result, including the timeline diagram, which reshapes itself around the contribution schedule rather than illustrating a fixed textbook case.
 
+### Calculator Overview
+
+#### Summary Statistics
+
+The top of the tab reports the headline results: final nominal balance, final real balance, total contributions, and lifetime tax. A second row reports the growth-multiple story behind those numbers: the first contribution's growth multiple, the final contribution's growth multiple, the money multiplier (ending balance divided by total contributions), and the cumulative effective tax rate across the whole horizon.
+
+#### Contribution Timing Timeline
+
+A schematic diagram of the actual annuity structure the model is solving, drawn from the live inputs rather than a fixed illustration. It redraws to reflect three things at once:
+
+- **Annuity type.** Beginning-of-period timing (annuity due) places the first contribution at the starting age and the last one period before retirement. End-of-period timing (annuity immediate) shifts both by one period.
+- **Contribution frequency.** Annual, semiannual, quarterly, monthly, weekly, or a custom trading-day interval. Sub-annual frequencies produce fractional contribution ages, which the diagram displays as mixed numbers (for example, age 64 and 11/12 for a monthly annuity-due final contribution).
+- **Deferred start.** A contribution delay pushes the first contribution forward by that many years, so a two-year deferral with monthly end-of-period timing correctly lands the first contribution at age 27 and 1/12, visually separated from the starting-age anchor.
+
+The starting age and retirement (valuation date) anchors stay fixed while the contribution markers float to their true computed positions, so the gap between when the horizon starts and when contributions actually begin is visible rather than implied.
+
+#### Balance over Time
+
+Nominal balance, real (inflation-adjusted) balance, and cumulative contributions plotted against age, with a linear/logarithmic y-axis toggle for scenarios spanning several orders of magnitude. The vintage cross-check status is surfaced directly on this chart as a badge.
+
+#### Purchasing Power Retained
+
+Real balance as a percentage of nominal balance over the horizon. Because that ratio reduces to the inflation discount factor alone, this curve is independent of investment return: it shows what a dollar's purchasing power does over time regardless of where the dollar sits. It is effectively the answer to what would happen if the money were held as cash under a mattress instead of earning any return, which makes the erosion side of the projection visible separately from the growth side.
+
+#### Growth Multiple by Contribution Vintage
+
+How many times over each year's contributions grow by retirement, plotted by the age at which they were contributed. The curve declines from left to right, which is the point: dollars contributed early compound for decades while dollars contributed near retirement barely compound at all. The same contribution amount is not worth the same thing depending on when it goes in.
+
+#### Annual Contributions and Terminal Value
+
+Each year's contribution plotted against what that specific contribution grows into by retirement, so the compounding gap between an early and a late dollar is visible in dollar terms rather than as a multiple.
+
+#### Milestones
+
+Four milestone lists, each filtered to what the scenario actually reaches rather than fixed thresholds: balance milestones as a share of the scenario's own final balance, nominal balance milestones at round dollar thresholds, salary milestones across the modeled salary range, and compounding milestones showing the ages at which the money doubles through pure compound growth (the Rule of 72 in practice).
+
+#### Tax and Allocation Detail
+
+- **Annual Take-Home Pay.** A stacked annual cash-flow chart breaking gross salary into federal income tax, optional flat state tax, payroll taxes (OASDI, Medicare, and Additional Medicare), and remaining take-home pay. The segments sum to modeled gross salary each year, so the shifting composition of a paycheck as income rises through progressive brackets is directly readable.
+- **Annual Tax Detail.** A year-by-year extension of the same breakdown, isolating the tax components on their own axis.
+- **Cumulative Tax Summary and Lifetime Income Allocation.** A summary table alongside a pie chart partitioning total lifetime gross salary into its end uses: taxes by type (federal, state, payroll), Roth IRA contributions, and retained income after both.
+
+#### Year-by-Year Time Series
+
+The full underlying projection as a table: salary, contribution, contribution method, limits, balances, taxes, and cumulative doublings for every modeled year. Exportable to CSV, which is what made the Excel cross-verification described below possible in the first place.
+
+### What-If Scenarios
+
+Every scenario on this tab runs as an isolated shadow calculation. None of them modify the base model, its charts, or its assumptions.
+
+#### Scenario Comparisons
+
+Bear, base, and bull cases computed as a spread around the user's own return assumption rather than fixed absolute rates, so the comparison scales with whatever base case was entered. Inflation swing scenarios do the same for the inflation assumption, reported against the real balance since nominal balance is unaffected by inflation. The tab also models a contribution gap (a career break with a user-specified start year and length, after which contributions resume) and an early stop age (contributions end permanently while the existing balance keeps compounding to retirement).
+
+#### Required Return Solver
+
+Answers the inverse question: given the contribution schedule and everything else held fixed, what constant annual return is required to reach a target balance? The target can optionally be entered in real terms, so the question becomes what return is needed for a given amount of future purchasing power rather than a given nominal dollar figure. The solver converts a real target to its nominal equivalent before solving. The implementation is a real numerical root-find (bracket and bisect), not a spreadsheet Goal-Seek workaround, and it reports when a target is unreachable rather than silently failing. See [Methodology](#methodology) for the full derivation.
+
+### Actuary Mode and Career Modeling
+
+#### Actuary Mode
+
+Models the salary trajectory of an actuarial career specifically, rather than applying a flat merit raise for forty years. Exam passes, Associate credentialing (ASA or ACAS), and Fellowship (FSA or FCAS) each contribute their own raise on their own timeline, layered on top of the base merit raise. The model is credential-status aware: if the user is already an Associate or Fellow, the corresponding raises are excluded rather than double-counted, on the assumption that an already-credentialed user's entered starting salary already reflects them. Timing inputs are validated against each other, so Fellowship cannot be modeled as arriving before the exams that precede it.
+
+#### Salary Cap
+
+An optional ceiling on modeled salary growth, for scenarios where a career plateaus at a senior level. Salary grows normally until it reaches the cap and then holds flat, including against exam and credential raises that would otherwise push it past the ceiling.
+
+#### Filing Status Transition
+
+Filing status can change partway through the projection (marriage being the common case), with the model switching to the new status's brackets, standard deduction, payroll thresholds, and Roth MAGI phase-out bands at the specified year.
+
+#### Optional Flat State Tax
+
+A flat-rate state income tax estimate applied to federal taxable income, clearly labeled as illustrative rather than a real state tax model.
 
 ## Tech Stack
 
@@ -64,7 +144,17 @@ The backend is a Python FastAPI service with Pydantic-validated inputs and a sin
 
 ## Setup
 
+The easiest way to use the app is the [live demo](#live-demo), no installation required. Note that free-tier Render instances spin down when idle, so the first request after a period of inactivity can take a few seconds to wake up; results are otherwise deterministic for the same inputs.
 
+To run it locally instead:
+
+```bash
+cd IRA
+pip install -r requirements.txt
+python -m uvicorn backend.app:app --reload
+```
+
+Then open `http://127.0.0.1:8000`. FastAPI serves both the `/api/calculate` endpoint and the static frontend (`index.html`, `style.css`, `app.js`) from the same process, so one command is enough. To run the test suite: `python -m pytest -q`.
 
 ## Methodology
 
@@ -139,7 +229,13 @@ Federal income tax is calculated progressively by applying each marginal rate on
 
 #### C-CPI-U Proxy for Future Tax Thresholds
 
-Future federal tax thresholds and standard deductions use the same simplified indexing framework. The user’s inflation assumption is treated as CPI inflation, and the model estimates C-CPI-U inflation as approximately 90.1% of that rate based on historical data since C-CPI-U became available. For example, a 3.0% CPI assumption produces a modeled C-CPI-U rate of approximately 2.7%.
+Future federal tax thresholds and standard deductions use the same simplified indexing framework. The IRS indexes these figures to Chained CPI-U (C-CPI-U), not headline CPI-U, so the model treats the user's inflation assumption as headline CPI and scales it down to a modeled C-CPI-U rate at 90% of that value. For example, a 3.0% CPI assumption produces a modeled C-CPI-U rate of 2.7%.
+
+That 90% factor was empirically checked against BLS CPI-U and C-CPI-U index data from 2000 through 2026 (the full span C-CPI-U has existed), using three independent estimation methods: a regression slope on monthly percent changes (98.8%), a regression slope on annual percent changes (94.7%), and the ratio of geometric mean annual growth rates over the full 26-year window (89.2%). The geometric-mean ratio is the theoretically appropriate one for this model, since it answers how much of CPI-U's cumulative compounded growth C-CPI-U captures over a long horizon, which is the same kind of long-run compounding question the model itself is solving over a 40-plus year projection. Monthly and annual regression slopes are more sensitive to short-term noise and are less suited to that use case. At 89.2%, the geometric-mean estimate rounds to the model's 90%, confirming the existing constant was already well-calibrated rather than an arbitrary round number.
+
+A fixed-point alternative (C-CPI-U = CPI-U minus a constant percentage-point spread, based on the historical average annual gap) was considered and rejected. A fixed subtraction can produce a negative C-CPI-U estimate whenever CPI-U itself is low, which is not a sensible result across the wide range of inflation scenarios (including near-zero and stress-test cases) this model needs to handle. The proportional form stays non-negative whenever CPI-U is, at any inflation level.
+
+This is a validated, reasonable estimate within the range the data supports (89% to 99% depending on method and window), not a precisely-derived figure. The full analysis (monthly and annual regressions, geometric mean calculations, and raw BLS data) is included in [`Data Stats/CPI-C-CPIU-Analysis.xlsx`](Data%20Stats/CPI-C-CPIU-Analysis.xlsx).
 
 #### Required Return Solver
 
@@ -167,6 +263,8 @@ The solve runs as an isolated shadow calculation: it does not overwrite the main
 
 ## Assumptions and Limitations
 
+
+
 #### Indexing
 
 The IRA indexing results are illustrative rather than official IRS forecasts. The IRS publishes the final contribution limits, but it does not publish the intermediate unrounded index used to determine each future limit. If the actual 2026 underlying index differs from the published $7,500 regular limit or $1,100 catch-up limit used as the model’s starting index, future modeled step increases could occur earlier or later than the official limits.
@@ -189,19 +287,59 @@ Salary growth and actuarial career progression are user-defined assumptions. Exa
 
 #### Deterministic Assumptions
 
-Investment returns, inflation, salary growth, contribution growth, and tax assumptions are deterministic. The model does not randomly simulate market volatility, sequence-of-returns risk, unemployment, or changing household circumstances. However, the What-If Scenarios tab includes a user-defined contribution gap or career-break scenario that allows the user to specify a gap start year and gap length. These scenarios run as isolated shadow calculations and do not change the base model. The gap scenario is deterministic and does not model the probability, salary impact, or timing uncertainty of an actual career interruption.
+Investment returns, inflation, salary growth, contribution growth, and tax assumptions are deterministic. The model applies a single constant return every period rather than a distribution of possible returns, so it produces one path rather than a range of outcomes.
+
+The most consequential thing this leaves out is sequence-of-returns risk. Applying a fixed return implies that the order in which returns arrive does not matter, when in practice it does: two scenarios with an identical average annual return can end at materially different balances depending on whether the weak years land early or late relative to the contribution schedule. A deterministic model cannot express that difference, and the projected balance should be read as a central estimate rather than an expected outcome with known dispersion around it. Addressing this is the motivation for the stochastic and Monte Carlo work described under [Future Improvements](#future-improvements).
+
+Several other real-world factors are outside the model's scope:
+
+- **Asset allocation and glide path.** The return assumption is a single rate held constant for the full horizon. The model does not shift toward a more conservative allocation approaching retirement, rebalance between asset classes, or distinguish between equity, fixed income, and cash components.
+- **Account disruptions.** Early withdrawals, hardship distributions, recharacterizations, and rollovers are not modeled. Contributions either occur on schedule or are suppressed by the What-If gap and early-stop scenarios.
+- **Behavioral response.** The model assumes contributions continue on schedule regardless of market conditions. It does not account for reduced or suspended contributions during downturns, or for any other behavioral reaction to volatility.
+- **Personal and household risk.** Disability, illness, death, divorce, dependents, and changes in household composition are not modeled, whether as direct events or through their effect on income and savings capacity.
+- **The decumulation phase.** The projection ends at the retirement valuation date. It does not model withdrawals, drawdown sequencing, longevity risk, retirement healthcare costs, or how long the resulting balance would last. The output answers what the balance is at retirement, not whether it is sufficient.
+
+The What-If Scenarios tab does include a user-defined contribution gap or career-break scenario, with a specified gap start year and length, along with an early-stop scenario. These run as isolated shadow calculations and do not change the base model. Both are still deterministic: they model the mechanical effect of a known interruption on the contribution schedule, not the probability, salary impact, or timing uncertainty of an actual career interruption.
 
 This project is for educational and portfolio purposes only. It is not tax, legal, actuarial, investment, or financial advice.
 
 ## Quality Assurance
 
+Every core calculation in this app was checked against a hand-built, independently-audited Excel model using the same assumptions in both places. That process caught several real bugs that a single implementation would not have surfaced on its own.
 
+#### Growth-Multiple Timing Bug
+
+Comparing outputs against the Excel model for a 22-to-65 horizon showed the first contribution's growth multiple computing as $1.07^{43}$ instead of the correct $1.07^{44}$. The projection horizon itself was one period short under beginning-of-period timing, which affected every figure derived from that multiple: ending balance, terminal value by vintage, and the money multiplier.
+
+#### Missing Earned-Income Cap on Contributions
+
+The model contributed the statutory IRA maximum every year without checking it against that year's modeled salary. Under IRC §219(b)(1), a contribution cannot exceed earned income for the year. A stress-test scenario with a low starting salary and high inflation-driven limit growth produced contributions exceeding salary before this cap was added.
+
+The check now runs on every contributing year and takes the lesser of the statutory limit and that year's modeled salary. If inflation outpaces wage growth far enough that the indexed limit reaches $15,500 in a year the modeled salary is only $15,000, the model contributes $15,000, not the statutory maximum. This applies regardless of whether Actuary Mode or the salary cap are active, since it is a statutory constraint rather than a modeling assumption. When the cap binds, the app reports how many years were affected and flags the specific rows in the year-by-year table, so a lower-than-expected contribution total is explained rather than looking like a defect.
+
+#### Real-Balance Deflation Off-by-One
+
+The first year's real (inflation-adjusted) balance was computing identically to the nominal balance, applying zero years of inflation to a balance that had, in fact, existed for one full year.
+
+#### MAGI Phase-Out Band Indexing Bug
+
+Roth IRA eligibility (Direct vs. Backdoor) compares modeled income against fixed, real, filing-status-specific phase-out bands. Those bands were being inflation-indexed along with everything else, so by later projection years the band had outrun a modeled salary that should have crossed it, and the app kept reporting "Direct" contributions well past the real income threshold.
+
+#### Contribution-Limit Indexing Gap
+
+Total lifetime contributions came in about $30,400 below the Excel model's figure for an identical scenario. Tracing the year-by-year IRA limit column against Excel isolated the cause to the same horizon off-by-one as the growth-multiple bug, not a difference in the indexing rate or rounding rule.
+
+#### Internal Self-Consistency Checks
+
+Beyond the Excel cross-check, the app runs an internal self-consistency check on every calculation: the seed balance plus every individual contribution's compounded terminal value must sum to the actual ending balance (the "vintage check"). This is surfaced in the UI, so a regression in the compounding logic would be visible immediately rather than only in a spreadsheet comparison. An automated test suite covers the accumulation math, tax calculations, contribution limits, IRA eligibility rules, and regression fixtures pulled directly from the Excel verification process.
 
 ## Future Improvements
 
 One direction I may add is optional Traditional IRA contributions alongside the current Roth path, including a comparison analysis for when each account type is more advantageous. That could include scenarios where it makes sense to prefer Traditional early, Roth later, or the reverse, depending on projected tax brackets, take-home pay, and retirement tax assumptions.
 
 Another direction is to move beyond fixed expected return and inflation assumptions. I am considering stochastic processes and Monte Carlo simulation driven by historical market returns, or by return distributions for selected investment classes, so outcomes can be shown as a range of paths rather than a single deterministic projection.
+
+A third direction is a decumulation phase that picks up where the current projection stops. Right now the model ends at the retirement valuation date and reports a balance, not what that balance can sustainably provide. I would like to add a withdrawal phase that applies a chosen withdrawal rate, such as the 4% rule or a more conservative variant like 3%, to translate the ending balance into a modeled annual retirement income, alongside a simple depletion check for how long the balance lasts under that rate given ongoing inflation. This would pair naturally with the Monte Carlo work above, since sequence-of-returns risk matters most during the drawdown years, when a portfolio is being depleted rather than grown, and a fixed-rate deterministic model cannot capture that.
 
 ## About Me
 

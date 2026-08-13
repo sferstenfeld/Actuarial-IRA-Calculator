@@ -874,6 +874,15 @@ function renderTaxDetailCharts(data) {
     }),
   });
 
+  const taxOpts = moneyAxisOptions();
+  taxOpts.plugins.legend.labels = {
+    color: MUTED,
+    // Solid legend swatches (including for the dashed payroll line on the plot).
+    usePointStyle: true,
+    pointStyle: "rect",
+    boxWidth: 12,
+    boxHeight: 12,
+  };
   taxChart = mountChart($("#taxChart"), {
     type: "line",
     data: {
@@ -883,17 +892,25 @@ function renderTaxDetailCharts(data) {
           label: "Federal income tax",
           data: fed,
           borderColor: ACCENT,
+          backgroundColor: ACCENT,
           borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointStyle: "rect",
         },
         {
           label: "Payroll tax",
           data: payroll,
           borderColor: SERIES_SECONDARY,
+          backgroundColor: SERIES_SECONDARY,
           borderDash: [4, 3],
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointStyle: "rect",
         },
       ],
     },
-    options: moneyAxisOptions(),
+    options: taxOpts,
   });
 }
 
@@ -1550,17 +1567,17 @@ function renderAnnuityTimeline() {
 
   // Left-side row labels — vertically centered with each row.
   parts.push(
-    `<text x="${gutter - 10}" y="${yPeriodicLabel}" text-anchor="end" fill="#9ca3af" font-size="10" font-weight="600" font-family="Open Sans,Segoe UI,sans-serif">` +
+    `<text x="${gutter - 10}" y="${yPeriodicLabel}" text-anchor="end" fill="#f5f6f7" font-size="10" font-weight="600" font-family="Open Sans,Segoe UI,sans-serif">` +
       `<tspan x="${gutter - 10}" dy="0">Periodic</tspan>` +
-      `<tspan x="${gutter - 10}" dy="${labelLine}">contribution</tspan>` +
-      `<tspan x="${gutter - 10}" dy="${labelLine}">amount</tspan>` +
-    `</text>`
+      `<tspan x="${gutter - 10}" dy="${labelLine}">Contribution</tspan>` +
+      `<tspan x="${gutter - 10}" dy="${labelLine}">Amount</tspan>` +
+      `</text>`
   );
   parts.push(
-    `<text x="${gutter - 10}" y="${yAgeLabel}" text-anchor="end" fill="#9ca3af" font-size="10" font-weight="600" font-family="Open Sans,Segoe UI,sans-serif">` +
+    `<text x="${gutter - 10}" y="${yAgeLabel}" text-anchor="end" fill="#f5f6f7" font-size="10" font-weight="600" font-family="Open Sans,Segoe UI,sans-serif">` +
       `<tspan x="${gutter - 10}" dy="0">Age</tspan>` +
-      `<tspan x="${gutter - 10}" dy="${labelLine}">(in years)</tspan>` +
-    `</text>`
+      `<tspan x="${gutter - 10}" dy="${labelLine}">(in Years)</tspan>` +
+      `</text>`
   );
 
   parts.push(
@@ -1627,11 +1644,11 @@ function renderAnnuityTimeline() {
     // End timing: same tick — stagger vertically so labels don't overlap.
     calloutArrow(x4, "#93c5fd");
     calloutLabel(x4, ["Last", "Contribution"], yCallout1, "#f5f6f7");
-    calloutLabel(x4, ["Retirement", "(valuation date)"], yCallout2, "#9ca3af");
+    calloutLabel(x4, ["Retirement", "(Valuation Date)"], yCallout2, "#f5f6f7");
   } else {
     // Beginning timing: distinct ticks — same vertical height as First/Last.
     callout(xLastArrow, ["Last", "Contribution"], "#93c5fd", yCallout1);
-    callout(x4, ["Retirement", "(valuation date)"], "#e5e7eb", yCallout1);
+    callout(x4, ["Retirement", "(Valuation Date)"], "#e5e7eb", yCallout1);
   }
 
   parts.push("</svg>");
