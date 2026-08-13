@@ -139,6 +139,7 @@ function toggleVisibility() {
   document.querySelectorAll(".status-change-only").forEach((el) => {
     el.classList.toggle("hidden", !change);
   });
+  syncFilingStatusSameWarning();
   const state = form.elements.include_state_tax.checked;
   document.querySelectorAll(".state-only").forEach((el) => {
     el.classList.toggle("hidden", !state);
@@ -153,6 +154,17 @@ function toggleVisibility() {
   });
   syncCredentialGating();
   validateSalaryCap();
+}
+
+/** Soft advisory when target filing status equals current (no-op change). */
+function syncFilingStatusSameWarning() {
+  const warnEl = $("#filingStatusSameWarning");
+  if (!warnEl) return;
+  const enabled = form.elements.filing_status_change_enabled.checked;
+  const same =
+    form.elements.filing_status.value ===
+    form.elements.target_filing_status.value;
+  warnEl.classList.toggle("hidden", !enabled || !same);
 }
 
 /**

@@ -331,6 +331,11 @@ input.input-invalid:focus {
   font-weight: 600;
 }
 
+.field-warn {
+  color: var(--amber, #c9a227);
+  font-weight: 600;
+}
+
 label.field-disabled {
   opacity: 0.45;
   pointer-events: none;

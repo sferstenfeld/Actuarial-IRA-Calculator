@@ -287,6 +287,43 @@ def test_filing_status_change_requires_target():
         _base_req(filing_status_change_enabled=True, target_filing_status=None)
 
 
+@pytest.mark.parametrize("status", list(FilingStatus))
+def test_filing_status_change_allows_same_target(status: FilingStatus):
+    """Same-status is accepted (no-op); UI warns instead of blocking."""
+    req = _base_req(
+        filing_status=status,
+        filing_status_change_enabled=True,
+        target_filing_status=status,
+        years_until_filing_status_change=1,
+        annual_inflation=0.0,
+        annual_merit_raise=0.0,
+    )
+    assert req.target_filing_status == status
+    resp = calculate(req)
+    assert all(y.tax.filing_status == status for y in resp.years)
+
+
+@pytest.mark.parametrize("status", list(FilingStatus))
+def test_filing_status_change_accepts_different_target(status: FilingStatus):
+    target = FilingStatus.JOINT if status != FilingStatus.JOINT else FilingStatus.SINGLE
+    req = _base_req(
+        filing_status=status,
+        filing_status_change_enabled=True,
+        target_filing_status=target,
+    )
+    assert req.target_filing_status == target
+
+
+def test_filing_status_change_disabled_ignores_matching_target():
+    """Same current/target is fine when the change toggle is off."""
+    req = _base_req(
+        filing_status=FilingStatus.SINGLE,
+        filing_status_change_enabled=False,
+        target_filing_status=FilingStatus.SINGLE,
+    )
+    assert req.filing_status_change_enabled is False
+
+
 @pytest.mark.parametrize("target", list(FilingStatus))
 def test_transition_to_every_target_status(target: FilingStatus):
     """Years before change keep source status; from switch year onward use target."""

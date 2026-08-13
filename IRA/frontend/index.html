@@ -128,6 +128,9 @@
             <label class="status-change-only hidden">Years until change
               <input type="number" name="years_until_filing_status_change" value="" min="0" placeholder="optional" />
             </label>
+            <p class="field-hint field-warn hidden" id="filingStatusSameWarning" role="status">
+              Your target filing status matches your original filing status. No change will actually apply. Select a different status to see the effect.
+            </p>
             <label class="check">
               <input type="checkbox" name="include_state_tax" />
               <span class="label-line">Flat state tax <span class="info-icon" data-tooltip="A simplified flat-rate estimate, not a real state tax calculation. It doesn't model actual state tax brackets, credits, deductions, local taxes, or state-specific rules." aria-label="More info" role="img">ⓘ</span></span>
