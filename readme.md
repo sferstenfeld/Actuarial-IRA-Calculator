@@ -86,7 +86,7 @@ Nominal balance, real (inflation-adjusted) balance, and cumulative contributions
 
 Real balance as a percentage of nominal balance over the horizon. Because that ratio reduces to the inflation discount factor alone, this curve is independent of investment return: it shows what a dollar's purchasing power does over time regardless of where the dollar sits. It is effectively the answer to what would happen if the money were held as cash under a mattress instead of earning any return, which makes the erosion side of the projection visible separately from the growth side.
 
-#### Growth Multiple by Contribution Vintage
+#### Growth Multiple by Contribution Age
 
 How many times over each year's contributions grow by retirement, plotted by the age at which they were contributed. The curve declines from left to right, which is the point: dollars contributed early compound for decades while dollars contributed near retirement barely compound at all. The same contribution amount is not worth the same thing depending on when it goes in.
 
